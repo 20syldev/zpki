@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificates Manager</title>
+    <link rel="icon" type="image/png" href="logo.png"/>
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.0/themes/base/jquery-ui.css"/>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+    <!-- JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.14.0/jquery-ui.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap');
+        * {
+            font-family: 'Poppins', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        .container-fluid {
+            width: 100%;
+            padding: 0;
+        }
+        
+        #certForm {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            height: 130px;
+            padding: 15px;
+            background: #fefefe;
+            z-index: 99;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .dropdown-toggle {
+            white-space: nowrap; 
+        }
+
+        .dropdown-menu {
+            margin-top: 7px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            z-index: 999;
+        }
+
+        .cert-validity {
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .cert-validity.active {
+            opacity: 0.5;
+        }
+
+        .btn {
+            opacity: 0.9;
+            margin-top: 3px;
+            font-weight: 500;
+        }
+        .btn[disabled] {
+            cursor: not-allowed;
+        }
+
+        /* Refresh message */
+        .refresh-message {
+            position: absolute;
+            top: 100%;
+            right: 15px;
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 20px;
+            border-top-right-radius: 5px;
+            background-color: #5c68af;
+            color: #fff;
+            font-size: 0.8em;
+            font-weight: 500;
+            opacity: 0;
+            transition: 0.5s ease;
+            transform: translateY(10px);
+        }
+        .refresh-message.show {
+            transform: translate(0);
+            opacity: 1;
+        }
+
+        /* Table */
+        thead {
+            position: sticky;
+            top: 130px;
+            background: #fefefe;
+            text-align: center;
+            z-index: 1;
+        }
+
+        thead::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 120px;
+            background: #fefefe;
+            box-shadow: 0 6px 6px rgba(0, 0, 0, 0.1);
+            z-index: -1;
+        }
+
+        table {
+            text-align: center;
+        }
+
+        th, td {
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        th.resizable {
+            resize: horizontal;
+            overflow: auto;
+        }
+
+        th.resizable:hover {
+            background: #fafafa;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <span class="block"></span>
+
+        <form id="certForm">
+            <div class="form-group">
+
+                <!-- Create a certificate -->
+                <div class="dropdown mr-2">
+                    <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <a class="dropdown-item" data-count="1">1 Certificate</a>
+                        <a class="dropdown-item" data-count="10">10 Certificates</a>
+                        <a class="dropdown-item" data-count="100">100 Certificates</a>
+                        <a class="dropdown-item" data-count="1000">1000 Certificates</a>
+                    </div>
+                </div>
+                <input type="hidden" id="certCount" value="">
+
+                <!-- Certificate name input -->
+                <input type="text" id="certName" class="form-control mr-2" placeholder="Nom du certificat (ex: Dolez Benoît)">
+
+                <!-- Search Bar -->
+                <input type="text" id="certSearch" class="form-control" placeholder="Rechercher un certificat">
+            </div>
+            
+            <!-- Actions -->
+            <div id="actionButtons" class="action-buttons">
+                <button id="revokeSelected" class="btn btn-danger btn-sm" disabled>
+                    <i class="mr-1 fa fa-ban"></i> Revoke
+                </button>
+                <button id="renewSelected" class="btn btn-success btn-sm" disabled>
+                    <i class="mr-1 fa fa-rotate-right"></i> Renew
+                </button>
+                <button id="refreshTable" class="btn btn-secondary btn-sm float-right">
+                    <i class="mr-1 fa fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            
+            <!-- Message after refreshing -->
+            <div id="refreshMessage" class="refresh-message"></div>
+        </form>
+
+        <!-- Table header -->
+        <table class="table table-bordered table-striped">
+            <thead class="thead">
+                <tr>
+                    <th class="resizable" scope="col" data-sort="validity"><i class="fa fa-chart-simple"></i></th>
+                    <th class="resizable" scope="col" data-sort="serial"><i class="mr-1 fa fa-hashtag"></i> Serial</th>
+                    <th class="resizable" scope="col" data-sort="signature"><i class="mr-1 fa fa-pencil-alt"></i> Signature</th>
+                    <th class="resizable" scope="col" data-sort="startDate"><i class="mr-1 fa fa-calendar-day"></i> Start Date</th>
+                    <th class="resizable" scope="col" data-sort="endDate"><i class="mr-1 fa fa-calendar-alt"></i> End Date</th>
+                    <th class="resizable" scope="col" data-sort="id"><i class="mr-1 fa fa-file-alt"></i> ID</th>
+                    <th class="resizable" scope="col" data-sort="actions"><i class="mr-1 fa fa-cogs"></i> Actions</th>
+                    <th class="resizable" scope="col" data-sort="downloads"><i class="mr-1 fa fa-download"></i> Downloads</th>
+                </tr>
+            </thead>            
+            <tbody id="certTableBody">
+                <!-- Certificates Data -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/js/all.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdownItems = document.querySelectorAll('.dropdown-item');
+            const dropdownButton = document.getElementById('dropdownMenuButton');
+            const certCountInput = document.getElementById('certCount');
+            const certNameInput = document.getElementById('certName');
+            const certSearchInput = document.getElementById('certSearch');
+            const certTableBody = document.getElementById('certTableBody');
+            const refreshButton = document.getElementById('refreshTable');
+            const refreshMessage = document.getElementById('refreshMessage');
+            const renewSelectedButton = document.getElementById('renewSelected');
+            const revokeSelectedButton = document.getElementById('revokeSelected');
+
+            // Adapt name, normalize
+            function encodeName(name) {
+                return name
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9-]/g, '');
+            }
+
+            function isExpired(endDate) {
+                const today = new Date();
+                const expiryDate = new Date(endDate);
+                return today > expiryDate;
+            }
+            
+            // Update actions buttons
+            function updateActionButtons() {
+                const selectedCerts = document.querySelectorAll('.cert-validity.active');
+                if (selectedCerts.length > 0) {
+                    revokeSelectedButton.disabled = false;
+                    renewSelectedButton.disabled = false;
+                } else {
+                    revokeSelectedButton.disabled = true;
+                    renewSelectedButton.disabled = true;
+                }
+            }
+
+            // Order buttons by type
+            function getValidityOrder(className) {
+                switch (className) {
+                    case 'btn-success': return 1; // Valid
+                    case 'btn-warning': return 2; // Warn
+                    case 'btn-danger': return 3; // Revoked
+                    default: return 4; // Unknown
+                }
+            }
+
+            function sortTable(columnIndex, order) {
+                const rows = Array.from(certTableBody.querySelectorAll('tr'));
+                console.log(`Sorting column ${columnIndex} in ${order} order`);
+                
+                rows.sort((a, b) => {
+                    const cellA = a.querySelector(`td:nth-child(${columnIndex})`);
+                    const cellB = b.querySelector(`td:nth-child(${columnIndex})`);
+
+                    if (columnIndex === 1) {
+                        const classNameA = cellA.querySelector('button').classList.contains('btn-success') ? 'btn-success' :
+                                        cellA.querySelector('button').classList.contains('btn-warning') ? 'btn-warning' :
+                                        'btn-danger';
+                        const classNameB = cellB.querySelector('button').classList.contains('btn-success') ? 'btn-success' :
+                                        cellB.querySelector('button').classList.contains('btn-warning') ? 'btn-warning' :
+                                        'btn-danger';
+                        
+                        const orderA = getValidityOrder(classNameA);
+                        const orderB = getValidityOrder(classNameB);
+                        
+                        if (order === 'asc') {
+                            return orderA - orderB;
+                        } else {
+                            return orderB - orderA;
+                        }
+                    } else {
+                        const textA = cellA.textContent.trim();
+                        const textB = cellB.textContent.trim();
+                        if (order === 'asc') {
+                            return textA.localeCompare(textB, undefined, { numeric: true });
+                        } else {
+                            return textB.localeCompare(textA, undefined, { numeric: true });
+                        }
+                    }
+                });
+
+                rows.forEach(row => certTableBody.appendChild(row));
+            }
+
+            // Sorting columns
+            document.querySelectorAll('thead th').forEach((header, index) => {
+                header.addEventListener('click', function() {
+                    const currentOrder = this.classList.contains('asc') ? 'desc' : 'asc';
+                    sortTable(index + 1, currentOrder);
+                    document.querySelectorAll('thead th').forEach(th => th.classList.remove('asc', 'desc'));
+                    this.classList.add(currentOrder);
+                });
+            });
+
+            // Load data from files & update table
+            function loadCertData() {
+                fetch('/list')
+                    .then(response => response.json())
+                    .then(data => {
+                        certTableBody.innerHTML = '';
+                        data.data.forEach(cert => {
+                            const isExpiredCert = isExpired(cert.endDate);
+                            const status = cert.status;
+                            const validityColor = isExpiredCert ? 'btn-warning' : (status !== 'R' ? 'btn-success' : 'btn-danger');
+                            const validityBtn = isExpiredCert ? '<i class="fa fa-triangle-exclamation"></i>' : (status !== 'R' ? '<i class="fa fa-circle-check"></i>' : '<i class="fa fa-times-circle"></i>');
+
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td><button class="btn btn-sm ${validityColor} cert-validity" data-id="${cert.id}">${validityBtn}</button></td>
+                                <td>${cert.serial}</td>
+                                <td>${cert.signature}</td>
+                                <td>${cert.startDate}</td>
+                                <td>${cert.endDate}</td>
+                                <td>${cert.id}</td>
+                                <td>
+                                    <button class="btn btn-success btn-sm" onclick="renewCert('${cert.id}')">Renew</button>
+                                    <button class="btn btn-danger btn-sm" onclick="revokeCert('${cert.id}')">Revoke</button>
+                                </td>
+                                <td>
+                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download>Download .crt</a>
+                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.csr" download>Download .csr</a>
+                                    <a class="btn btn-info btn-sm" href="/src/private/${cert.id}.key" download>Download .key</a>
+                                </td>
+                            `;
+                            certTableBody.appendChild(row);
+                        });
+
+                        const certButtons = document.querySelectorAll('.cert-validity');
+                        certButtons.forEach(button => {
+                            button.addEventListener('click', function() {
+                                this.classList.toggle('active');
+                                updateActionButtons();
+                            });
+                        });
+
+                        updateActionButtons();
+                    })
+                    .catch(error => console.error('Certificate loading error:', error));
+            }
+
+            // Dropdown menu to generate a specific number of certificates
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const certCount = this.getAttribute('data-count');
+                    const certName = encodeName(certNameInput.value || 'Dolez Benoît');
+                    certCountInput.value = certCount;
+
+                    dropdownButton.setAttribute('disabled', 'true');
+
+                    // Request create a certificate
+                    fetch(`/create?name=${encodeURIComponent(certName)}&count=${certCount}`)
+                        .then(response => response.text())
+                        .catch(error => {
+                            console.error('Error:', error);
+                        })
+                        .finally(() => {
+                            setTimeout(() => {
+                                dropdownButton.removeAttribute('disabled');
+                            }, 3000);
+                        });
+                });
+            });
+
+            // Filter certificates by name
+            certSearchInput.addEventListener('input', function() {
+                const searchText = encodeName(this.value).toLowerCase();
+                const rows = certTableBody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    let match = false;
+                    cells.forEach(cell => {
+                        if (encodeName(cell.textContent).toLowerCase().includes(searchText)) {
+                            match = true;
+                        }
+                    });
+                    row.style.display = match ? '' : 'none';
+                });
+            });
+            
+            // Refreshing the table
+            refreshButton.addEventListener('click', function(event) {
+                event.preventDefault();
+                loadCertData();
+                refreshMessage.textContent = 'Done!';
+                refreshMessage.classList.add('show');
+                setTimeout(() => refreshMessage.classList.remove('show'), 1000);
+            });
+
+            // Renew multiple certificates
+            renewSelectedButton.addEventListener('click', function() {
+                event.preventDefault();
+                const selectedCerts = Array.from(document.querySelectorAll('.cert-validity.active')).map(button => button.getAttribute('data-id'));
+                if (selectedCerts.length > 0) {
+                    fetch('/renew', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ id: selectedCerts })
+                    })
+                    .then(response => response.text())
+                    .then(() => loadCertData())
+                    .catch(error => console.error('Renewal error:', error));
+                }
+            });
+
+            // Revoke multiple certificates
+            revokeSelectedButton.addEventListener('click', function() {
+                event.preventDefault();
+                const selectedCerts = Array.from(document.querySelectorAll('.cert-validity.active')).map(button => button.getAttribute('data-id'));
+                if (selectedCerts.length > 0) {
+                    fetch('/revoke', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ id: selectedCerts })
+                    })
+                    .then(response => response.text())
+                    .then(() => loadCertData())
+                    .catch(error => console.error('Revocation error:', error));
+                }
+            });
+
+            // JQuery UI Testing (Move column)
+            $(document).ready(function() {
+                $("table thead").sortable({
+                    items: 'th',
+                    cursor: 'move',
+                    axis: 'x',
+                    start: function(event, ui) {
+                        ui.placeholder.height(ui.helper.outerHeight());
+                    },
+                    stop: function(event, ui) {
+                        console.log('Moved successfully')
+                    }
+                });
+            });
+
+            // Renew one certificate
+            window.renewCert = function(id) {
+                fetch('/renew', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: [id] })
+                })
+                .then(response => response.text())
+                .then(() => loadCertData())
+                .catch(error => console.error('Renewal error:', error));
+            };
+
+            // Revoke one certificate
+            window.revokeCert = function(id) {
+                fetch('/revoke', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: [id] })
+                })
+                .then(response => response.text())
+                .then(() => loadCertData())
+                .catch(error => console.error('Revocation error:', error));
+            };
+
+            loadCertData();
+        });
+    </script>
+</body>
+</html>
