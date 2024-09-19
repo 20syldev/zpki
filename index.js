@@ -154,21 +154,33 @@ const readCertData = () => {
     idxLines.forEach(line => {
         const parts = line.trim().split(/\s+/);
         if (parts.length >= 5) {
-            const serial = parts[2];
             const status = parts[0];
-            const expiration = parts[1];
-            const subject = parts[4] !== 'unknown' ? parts[4].replace('/CN=', '') : ''; 
-            certMap.set(serial, { 
-                status,
-                expiration,
-                id: subject
-            });
+            if (status == 'R') {
+                const expiration = parts[1];
+                // const startDate = parts[2];
+                const serial = parts[3];
+                const subject = parts[5] !== 'unknown' ? parts[5].replace('/CN=', '') : ''; 
+                certMap.set(serial, { 
+                    status,
+                    expiration,
+                    id: subject
+                });
+            } else {
+                const expiration = parts[1];
+                const serial = parts[2];
+                const subject = parts[4] !== 'unknown' ? parts[4].replace('/CN=', '') : ''; 
+                certMap.set(serial, { 
+                    status,
+                    expiration,
+                    id: subject
+                });
+            }
         }
     });
 
     idzLines.forEach(line => {
         const parts = line.trim().split(/\s+/);
-        if (parts.length >= 5) {
+        if (parts.length >= 6) {
             const serial = parts[0];
             if (certMap.has(serial)) {
                 const cert = certMap.get(serial);
