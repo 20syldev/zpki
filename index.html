@@ -158,10 +158,10 @@
                 <input type="hidden" id="certCount" value="">
 
                 <!-- Certificate name input -->
-                <input type="text" id="certName" class="form-control mr-2" placeholder="Nom du certificat (ex: Dolez Benoît)">
+                <input type="text" id="certName" class="form-control mr-2" placeholder="Certificate name (ex: Dolez Benoît)">
 
                 <!-- Search Bar -->
-                <input type="text" id="certSearch" class="form-control" placeholder="Rechercher un certificat">
+                <input type="text" id="certSearch" class="form-control" placeholder="Search for a certificate">
             </div>
             
             <!-- Actions -->
@@ -322,8 +322,8 @@
                                 <td>${cert.endDate}</td>
                                 <td>${cert.id}</td>
                                 <td>
-                                    <button class="btn btn-success btn-sm" onclick="renewCert('${cert.id}')">Renew</button>
-                                    <button class="btn btn-danger btn-sm" onclick="revokeCert('${cert.id}')">Revoke</button>
+                                    <button class="btn btn-success btn-sm" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}>Renew</button>
+                                    <button class="btn btn-danger btn-sm" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}>Revoke</button>
                                 </td>
                                 <td>
                                     <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download>Download .crt</a>
