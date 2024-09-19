@@ -51,11 +51,11 @@
             z-index: 999;
         }
 
-        .cert-validity {
+        .cert-checkbox {
             cursor: pointer;
             transition: 0.3s;
         }
-        .cert-validity.active {
+        .cert-checkbox.active {
             opacity: 0.5;
         }
 
@@ -68,25 +68,15 @@
             cursor: not-allowed;
         }
 
-        /* Refresh message */
-        .refresh-message {
-            position: absolute;
-            margin: 7px 0;
-            right: 15px;
-            padding: 5px 10px;
-            border-radius: 20px;
-            border-top-right-radius: 5px;
-            background-color: #5c68af;
-            color: #fff;
-            font-size: 0.8em;
-            font-weight: 500;
-            opacity: 0;
-            transition: 0.5s ease;
-            transform: translateY(20px);
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
         }
-        .refresh-message.show {
-            transform: translate(0);
-            opacity: 1;
+        .tooltip-inner {
+            padding: 10px 15px;
+            max-width: 500px;
+            line-height: 1.8em;
+            border-radius: 10px;
         }
 
         /* Table */
@@ -134,6 +124,7 @@
         ::-webkit-scrollbar {
             display: none;
         }
+        
     </style>
 </head>
 <body>
@@ -158,7 +149,7 @@
                 <input type="hidden" id="certCount" value="">
 
                 <!-- Certificate name input -->
-                <input type="text" id="certName" class="form-control mr-2" placeholder="Certificate name (ex: Dolez Benoît)">
+                <input type="text" id="certName" class="form-control mr-2" placeholder="Certificate name (ex: John Doe)">
 
                 <!-- Search Bar -->
                 <input type="text" id="certSearch" class="form-control" placeholder="Search for a certificate">
@@ -166,35 +157,32 @@
             
             <!-- Actions -->
             <div id="actionButtons" class="action-buttons">
-                <button id="revokeSelected" class="btn btn-danger btn-sm" disabled>
+                <button id="revokeSelected" class="btn btn-dark btn-sm" hidden>
                     <i class="mr-1 fa fa-ban"></i> Revoke
                 </button>
-                <button id="renewSelected" class="btn btn-success btn-sm" disabled>
+                <button id="renewSelected" class="btn btn-dark btn-sm" hidden>
                     <i class="mr-1 fa fa-rotate-right"></i> Renew
                 </button>
-                <button id="refreshTable" class="btn btn-secondary btn-sm float-right">
+                <button id="refresh" class="btn btn-secondary btn-sm float-right">
                     <i class="mr-1 fa fa-sync-alt"></i> Refresh
                 </button>
             </div>
-            
-            <!-- Message after refreshing -->
-            <div id="refreshMessage" class="refresh-message"></div>
         </form>
 
         <!-- Table header -->
         <table class="table table-bordered table-striped">
             <thead class="thead">
                 <tr>
-                    <th class="resizable" scope="col" data-sort="validity"><i class="fa fa-chart-simple"></i></th>
-                    <th class="resizable" scope="col" data-sort="serial"><i class="mr-1 fa fa-hashtag"></i> Serial</th>
-                    <th class="resizable" scope="col" data-sort="signature"><i class="mr-1 fa fa-pencil-alt"></i> Signature</th>
-                    <th class="resizable" scope="col" data-sort="startDate"><i class="mr-1 fa fa-calendar-day"></i> Start Date</th>
-                    <th class="resizable" scope="col" data-sort="endDate"><i class="mr-1 fa fa-calendar-alt"></i> End Date</th>
-                    <th class="resizable" scope="col" data-sort="id"><i class="mr-1 fa fa-file-alt"></i> ID</th>
-                    <th class="resizable" scope="col" data-sort="actions"><i class="mr-1 fa fa-cogs"></i> Actions</th>
-                    <th class="resizable" scope="col" data-sort="downloads"><i class="mr-1 fa fa-download"></i> Downloads</th>
+                    <th class="resizable" scope="col" data-sort="selectBox"><div class="sortable-handle"><i class="fa fa-square-check"></i></div></th>
+                    <th class="resizable" scope="col" data-sort="validity"><div class="sortable-handle"><i class="fa fa-chart-simple"></i></div></th>
+                    <th class="resizable" scope="col" data-sort="serial"><div class="sortable-handle"><i class="mr-1 fa fa-hashtag"></i> Serial</div></th>
+                    <th class="resizable" scope="col" data-sort="startDate"><div class="sortable-handle"><i class="mr-1 fa fa-calendar-day"></i> Start Date</div></th>
+                    <th class="resizable" scope="col" data-sort="endDate"><div class="sortable-handle"><i class="mr-1 fa fa-calendar-alt"></i> End Date</div></th>
+                    <th class="resizable" scope="col" data-sort="id"><div class="sortable-handle"><i class="mr-1 fa fa-file-alt"></i> ID</div></th>
+                    <th class="resizable" scope="col" data-sort="actions"><div class="sortable-handle"><i class="mr-1 fa fa-cogs"></i> Actions</div></th>
+                    <th class="resizable" scope="col" data-sort="downloads"><div class="sortable-handle"><i class="mr-1 fa fa-download"></i> Downloads</div></th>
                 </tr>
-            </thead>            
+            </thead>
             <tbody id="certTableBody">
                 <!-- Certificates Data -->
             </tbody>
@@ -210,67 +198,76 @@
             const certNameInput = document.getElementById('certName');
             const certSearchInput = document.getElementById('certSearch');
             const certTableBody = document.getElementById('certTableBody');
-            const refreshButton = document.getElementById('refreshTable');
-            const refreshMessage = document.getElementById('refreshMessage');
+            const refreshButton = document.getElementById('refresh');
             const renewSelectedButton = document.getElementById('renewSelected');
             const revokeSelectedButton = document.getElementById('revokeSelected');
+
+            // Check if input is empty or not
+            function toggleCreateButton() {
+                if (certNameInput.value.trim() === "") {
+                    dropdownButton.disabled = true;
+                } else {
+                    dropdownButton.disabled = false;
+                }
+            }
+            toggleCreateButton();
+
+            // Initialize tool tips
+            function initializeTooltips() {
+                $('[data-toggle="tooltip"]').tooltip({
+                    html: true
+                });
+            }
 
             // Adapt name, normalize
             function encodeName(name) {
                 return name
-                    .toLowerCase()
                     .normalize('NFD')
                     .replace(/[\u0300-\u036f]/g, '')
                     .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9-]/g, '');
+                    .replace(/[^a-z0-9-_]/g, '');
             }
 
-            function isExpired(endDate) {
-                const today = new Date();
-                const expiryDate = new Date(endDate);
-                return today > expiryDate;
+            // Format date to YYYY/MM/DD from ISO format
+            function formatDate(isoDateString) {
+                const date = new Date(isoDateString);
+                return date.toLocaleDateString('fr-CA');
             }
             
             // Update actions buttons
             function updateActionButtons() {
-                const selectedCerts = document.querySelectorAll('.cert-validity.active');
+                const selectedCerts = document.querySelectorAll('.cert-checkbox.active');
                 if (selectedCerts.length > 0) {
-                    revokeSelectedButton.disabled = false;
-                    renewSelectedButton.disabled = false;
+                    revokeSelectedButton.hidden = false;
+                    renewSelectedButton.hidden = false;
                 } else {
-                    revokeSelectedButton.disabled = true;
-                    renewSelectedButton.disabled = true;
+                    revokeSelectedButton.hidden = true;
+                    renewSelectedButton.hidden = true;
                 }
             }
 
-            // Order buttons by type
-            function getValidityOrder(className) {
-                switch (className) {
-                    case 'btn-success': return 1; // Valid
-                    case 'btn-warning': return 2; // Warn
-                    case 'btn-danger': return 3; // Revoked
+            // Get validity order in sort
+            function getValidityOrder(status) {
+                switch (status) {
+                    case 'V': return 1; // Valid
+                    case 'I': return 2; // Invalid
+                    case 'R': return 3; // Revoked
                     default: return 4; // Unknown
                 }
             }
 
             function sortTable(columnIndex, order) {
-                const rows = Array.from(certTableBody.querySelectorAll('tr'));
-                console.log(`Sorting column ${columnIndex} in ${order} order`);
-                
+                const rows = Array.from(certTableBody.querySelectorAll('tr'));                
                 rows.sort((a, b) => {
                     const cellA = a.querySelector(`td:nth-child(${columnIndex})`);
                     const cellB = b.querySelector(`td:nth-child(${columnIndex})`);
 
                     if (columnIndex === 1) {
-                        const classNameA = cellA.querySelector('button').classList.contains('btn-success') ? 'btn-success' :
-                                        cellA.querySelector('button').classList.contains('btn-warning') ? 'btn-warning' :
-                                        'btn-danger';
-                        const classNameB = cellB.querySelector('button').classList.contains('btn-success') ? 'btn-success' :
-                                        cellB.querySelector('button').classList.contains('btn-warning') ? 'btn-warning' :
-                                        'btn-danger';
-                        
-                        const orderA = getValidityOrder(classNameA);
-                        const orderB = getValidityOrder(classNameB);
+                        const statusA = cellA.querySelector('button').getAttribute('data-status');
+                        const statusB = cellB.querySelector('button').getAttribute('data-status');
+
+                        const orderA = getValidityOrder(statusA);
+                        const orderB = getValidityOrder(statusB);
                         
                         if (order === 'asc') {
                             return orderA - orderB;
@@ -291,67 +288,75 @@
                 rows.forEach(row => certTableBody.appendChild(row));
             }
 
-            // Sorting columns
-            document.querySelectorAll('thead th').forEach((header, index) => {
-                header.addEventListener('click', function() {
-                    const currentOrder = this.classList.contains('asc') ? 'desc' : 'asc';
-                    sortTable(index + 1, currentOrder);
-                    document.querySelectorAll('thead th').forEach(th => th.classList.remove('asc', 'desc'));
-                    this.classList.add(currentOrder);
-                });
-            });
-
-            // Load data from files & update table
+            // Load data from files, update table & check checkboxes
             function loadCertData() {
                 fetch('/list')
                     .then(response => response.json())
                     .then(data => {
                         certTableBody.innerHTML = '';
                         data.forEach(cert => {
-                            const isExpiredCert = isExpired(cert.endDate);
                             const status = cert.status;
-                            const validityColor = isExpiredCert ? 'btn-warning' : (status !== 'R' ? 'btn-success' : 'btn-danger');
-                            const validityBtn = isExpiredCert ? '<i class="fa fa-triangle-exclamation"></i>' : (status !== 'R' ? '<i class="fa fa-circle-check"></i>' : '<i class="fa fa-times-circle"></i>');
+                            const validityColor = status === 'I' ? 'warning' : (status !== 'R' ? 'success' : 'danger');
+                            const validityText = status === 'I' ? 'Invalid' : (status !== 'R' ? 'Valid' : 'Revoked');
+                            const validityBtn = status === 'I' ? '<i class="mr-1 fa fa-triangle-exclamation"></i> Invalid' : (status !== 'R' ? '<i class="mr-1 fa fa-circle-check"></i> Valid' : '<i class="mr-1 fa fa-times-circle"></i> Revoked');
 
                             const row = document.createElement('tr');
                             row.innerHTML = `
-                                <td><button class="btn btn-sm ${validityColor} cert-validity" data-id="${cert.id}">${validityBtn}</button></td>
-                                <td>${cert.serial}</td>
-                                <td>${cert.signature}</td>
-                                <td>${cert.startDate}</td>
-                                <td>${cert.endDate}</td>
-                                <td>${cert.id}</td>
+                                <td><button class="btn btn-dark btn-sm cert-checkbox"><i class="fa fa-minus"></i></button></td>
+                                <td><button class="btn btn-${validityColor} btn-sm" data-id="${cert.id}">${validityBtn}</button></td>
                                 <td>
-                                    <button class="btn btn-success btn-sm" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}>Renew</button>
-                                    <button class="btn btn-danger btn-sm" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}>Revoke</button>
+                                    <span class="tooltip-container" data-toggle="tooltip" data-html="true" data-placement="bottom" 
+                                    title="<div>Signature: ${cert.signature}</div>">
+                                        ${cert.serial}
+                                    </span>
                                 </td>
                                 <td>
-                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download>Download .crt</a>
-                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.csr" download>Download .csr</a>
-                                    <a class="btn btn-info btn-sm" href="/src/private/${cert.id}.key" download>Download .key</a>
+                                    <span class="tooltip-container" data-toggle="tooltip" data-placement="bottom" title="${cert.startDate}">${formatDate(cert.startDate)}</span>
+                                </td>
+                                <td>
+                                    <span class="tooltip-container" data-toggle="tooltip" data-placement="bottom" title="${cert.endDate}">${formatDate(cert.endDate)}</span>
+                                </td>
+                                <td>${cert.id}</td>
+                                <td>
+                                    <button class="btn btn-dark btn-sm" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><i class="mr-1 fa fa-ban"></i> Revoke</button>
+                                    <button class="btn btn-dark btn-sm" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><i class="mr-1 fa fa-rotate-right"></i> Renew</button>
+                                </td>
+                                <td>
+                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download><i class="mr-1 fas fa-file-download"></i> .crt</a>
+                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.csr" download><i class="mr-1 fas fa-file-download"></i> .csr</a>
+                                    <a class="btn btn-info btn-sm" href="/src/private/${cert.id}.key" download><i class="mr-1 fas fa-file-download"></i> .key</a>
                                 </td>
                             `;
                             certTableBody.appendChild(row);
                         });
-
-                        const certButtons = document.querySelectorAll('.cert-validity');
+                        
+                        const certButtons = document.querySelectorAll('.cert-checkbox');
                         certButtons.forEach(button => {
                             button.addEventListener('click', function() {
                                 this.classList.toggle('active');
                                 updateActionButtons();
+
+                                if (this.classList.contains('active')) {
+                                    this.innerHTML = '<i class="fa fa-check"></i>';
+                                } else {
+                                    this.innerHTML = '<i class="fa fa-minus"></i>';
+                                }
                             });
                         });
-
                         updateActionButtons();
+                        initializeTooltips();
                     })
                     .catch(error => console.error('Certificate loading error:', error));
             }
+
+            // Update create button based on input
+            certNameInput.addEventListener('input', toggleCreateButton);
 
             // Dropdown menu to generate a specific number of certificates
             dropdownItems.forEach(item => {
                 item.addEventListener('click', function() {
                     const certCount = this.getAttribute('data-count');
-                    const certName = encodeName(certNameInput.value || 'Dolez Benoît');
+                    const certName = encodeName(certNameInput.value);
                     certCountInput.value = certCount;
 
                     dropdownButton.setAttribute('disabled', 'true');
@@ -390,15 +395,19 @@
             refreshButton.addEventListener('click', function(event) {
                 event.preventDefault();
                 loadCertData();
-                refreshMessage.textContent = 'Done!';
-                refreshMessage.classList.add('show');
-                setTimeout(() => refreshMessage.classList.remove('show'), 1000);
+                refreshButton.classList.add('btn-success');
+                refreshButton.innerHTML = '<i class="mr-1 fa fa-square-check"></i> Done!';
+                
+                setTimeout(() => {
+                    refreshButton.innerHTML = '<i class="mr-1 fa fa-sync-alt"></i> Refresh';
+                    refreshButton.classList.remove('btn-success');
+                }, 1300);
             });
 
             // Renew multiple certificates
             renewSelectedButton.addEventListener('click', function() {
                 event.preventDefault();
-                const selectedCerts = Array.from(document.querySelectorAll('.cert-validity.active')).map(button => button.getAttribute('data-id'));
+                const selectedCerts = Array.from(document.querySelectorAll('.cert-checkbox.active')).map(button => button.getAttribute('data-id'));
                 if (selectedCerts.length > 0) {
                     fetch('/renew', {
                         method: 'POST',
@@ -416,7 +425,7 @@
             // Revoke multiple certificates
             revokeSelectedButton.addEventListener('click', function() {
                 event.preventDefault();
-                const selectedCerts = Array.from(document.querySelectorAll('.cert-validity.active')).map(button => button.getAttribute('data-id'));
+                const selectedCerts = Array.from(document.querySelectorAll('.cert-checkbox.active')).map(button => button.getAttribute('data-id'));
                 if (selectedCerts.length > 0) {
                     fetch('/revoke', {
                         method: 'POST',
@@ -431,20 +440,47 @@
                 }
             });
 
-            // JQuery UI Testing (Move column)
-            // $(document).ready(function() {
-            //     $("table thead").sortable({
-            //         items: 'th',
-            //         cursor: 'move',
-            //         axis: 'x',
-            //         start: function(event, ui) {
-            //             ui.placeholder.height(ui.helper.outerHeight());
-            //         },
-            //         stop: function(event, ui) {
-            //             console.log('Moved successfully')
-            //         }
-            //     });
-            // });
+            // JQuery
+            $(document).ready(function() {
+                $("table thead").sortable({
+                        items: 'th',
+                        handle: '.sortable-handle',
+                        cursor: 'move',
+                        axis: 'x',
+                        start: function(event, ui) {
+                            ui.placeholder.height(ui.helper.outerHeight());
+                        },
+                        stop: function(event, ui) {
+                            const newOrder = $("table thead th").map(function() {
+                                return $(this).index();
+                            }).get();
+
+                            $("table thead").html(
+                                $("table thead th").sort(function(a, b) {
+                                    return newOrder[$(a).index()] - newOrder[$(b).index()];
+                                }).toArray()
+                            );
+
+                            $("table tbody").each(function() {
+                                $(this).children("tr").each(function() {
+                                    const cells = $(this).children("td").toArray();
+                                    const reorderedCells = newOrder.map(index => cells[index]);
+                                    $(this).empty().append(reorderedCells);
+                                });
+                            });
+                        }
+                }).disableSelection();
+            });
+
+            // Sorting columns
+            document.querySelectorAll('thead th').forEach((header, index) => {
+                header.addEventListener('click', function() {
+                    const currentOrder = this.classList.contains('asc') ? 'desc' : 'asc';
+                    sortTable(index + 1, currentOrder);
+                    document.querySelectorAll('thead th').forEach(th => th.classList.remove('asc', 'desc'));
+                    this.classList.add(currentOrder);
+                });
+            });
 
             // Renew one certificate
             window.renewCert = function(id) {
