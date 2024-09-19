@@ -307,7 +307,7 @@
                     .then(response => response.json())
                     .then(data => {
                         certTableBody.innerHTML = '';
-                        data.data.forEach(cert => {
+                        data.forEach(cert => {
                             const isExpiredCert = isExpired(cert.endDate);
                             const status = cert.status;
                             const validityColor = isExpiredCert ? 'btn-warning' : (status !== 'R' ? 'btn-success' : 'btn-danger');

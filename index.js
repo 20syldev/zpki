@@ -34,8 +34,7 @@ const findUniqueCertName = (baseName) => {
 // Route to get the list of certificates
 app.get('/list', (req, res) => {
     try {
-        const certData = readCertData();
-        res.json({ data: certData });
+        res.json(readCertData());
     } catch (error) {
         res.status(500).send(error.message);
     }
