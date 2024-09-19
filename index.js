@@ -1,8 +1,11 @@
-const express = require('express');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+
+// Need installation via npm
+const express = require('express');
 const cors = require('cors');
+const moment = require('moment');
 
 const app = express();
 const port = 3000;
@@ -31,10 +34,17 @@ const findUniqueCertName = (baseName) => {
     return uniqueName;
 };
 
+// Function to validate certificate name
+const validateCertName = (name) => {
+    const regex = /^[a-zA-Z0-9-_]+$/;
+    return regex.test(name);
+};
+
 // Route to get the list of certificates
 app.get('/list', (req, res) => {
     try {
-        res.json(readCertData());
+        const certData = readCertData();
+        res.json(certData);
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -42,13 +52,21 @@ app.get('/list', (req, res) => {
 
 // Route to create certificates
 app.get('/create', async (req, res) => {
-    const certName = req.query.name || 'Dolez Benoît';
+    const certName = req.query.name;
     const count = parseInt(req.query.count) || 1;
     let generatedCount = 0;
+
+    // Validate certificate name
+    if (!validateCertName(certName)) {
+        return res.status(400).send('Invalid certificate name. Only alphanumeric characters, hyphens, and underscores are allowed.');
+    }
 
     const createCert = (uniqueCertName) => {
         return new Promise((resolve, reject) => {
             exec(`cd ${path.join(srcDir)} && ./zpki -y -c none create-crt "${uniqueCertName}"`, (error, stdout, stderr) => {
+                if (error) {
+                    return reject(`Creation error: ${stderr}`);
+                }
                 resolve(stdout);
             });
         });
@@ -150,35 +168,28 @@ const readCertData = () => {
 
     const certMap = new Map();
 
+    const parseCN = (str) => {
+        const match = str.match(/\/CN=([\s\S]*?)(?:\/|$)/);
+        return match ? match[1].trim() : '';
+    };
+
     idxLines.forEach(line => {
-        const parts = line.trim().split(/\s+/);
+        const parts = line.trim().split('\t');
         if (parts.length >= 5) {
             const status = parts[0];
-            if (status == 'R') {
-                const expiration = parts[1];
-                // const startDate = parts[2];
-                const serial = parts[3];
-                const subject = parts[5] !== 'unknown' ? parts[5].replace('/CN=', '') : ''; 
-                certMap.set(serial, { 
-                    status,
-                    expiration,
-                    id: subject
-                });
-            } else {
-                const expiration = parts[1];
-                const serial = parts[2];
-                const subject = parts[4] !== 'unknown' ? parts[4].replace('/CN=', '') : ''; 
-                certMap.set(serial, { 
-                    status,
-                    expiration,
-                    id: subject
-                });
-            }
+            const expiration = parts[1];
+            const serial = parts[3];
+            const subject = parts[4] !== 'unknown' ? parseCN(parts[4]) : '';
+            certMap.set(serial, { 
+                status,
+                expiration,
+                id: subject
+            });
         }
     });
 
     idzLines.forEach(line => {
-        const parts = line.trim().split(/\s+/);
+        const parts = line.trim().split('\t');
         if (parts.length >= 6) {
             const serial = parts[0];
             if (certMap.has(serial)) {
@@ -187,18 +198,26 @@ const readCertData = () => {
                 cert.signature = parts[1];
                 cert.startDate = parts[2];
                 cert.endDate = parts[3];
-                cert.id = parts[4] !== 'unknown' ? parts[4].replace('/CN=', '') : cert.id;
+                cert.id = parts[4] !== 'unknown' ? parseCN(parts[4]) : cert.id;
                 certMap.set(serial, cert);
             }
         }
     });
 
-    // Filter certificates with undefined or empty fields
-    return Array.from(certMap.values()).filter(cert => 
+    // Update status if expiration date is in the past
+    const now = moment();
+    const certificateData = Array.from(certMap.values()).map(cert => {
+        if (moment(cert.endDate).isBefore(now)) {
+            cert.status = 'I'; // Invalid
+        }
+        return cert;
+    }).filter(cert => 
         cert.id && cert.id !== 'undefined' &&
         cert.status && cert.expiration && cert.serial &&
         cert.startDate && cert.endDate
     );
+
+    return certificateData;
 };
 
 app.listen(port, () => {
