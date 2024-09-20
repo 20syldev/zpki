@@ -7,27 +7,22 @@ const express = require('express');
 const cors = require('cors');
 const moment = require('moment');
 
+// Set basic variables
 const app = express();
 const port = 3000;
-
-// Path to the source directory
 const srcDir = path.join(__dirname, 'src');
 
+// Setup express & cors
 app.use(express.static(__dirname));
 app.use('/src', express.static(srcDir));
 app.use(express.json());
 app.use(cors());
 
-// Route to serve index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
 // Function to find a unique certificate name
 const findUniqueCertName = (baseName) => {
     let uniqueName = baseName;
     let index = 1;
-    while (fs.existsSync(path.join(srcDir, 'certs', `${uniqueName}.crt`))) {
+    while (fs.existsSync(path.join(__dirname, 'src', 'certs', `${uniqueName}.crt`))) {
         uniqueName = `${baseName}${index}`;
         index++;
     }
@@ -39,6 +34,11 @@ const validateCertName = (name) => {
     const regex = /^[a-zA-Z0-9-_]+$/;
     return regex.test(name);
 };
+
+// Route to serve index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Route to get the list of certificates
 app.get('/list', (req, res) => {
@@ -63,7 +63,7 @@ app.get('/create', async (req, res) => {
 
     const createCert = (uniqueCertName) => {
         return new Promise((resolve, reject) => {
-            exec(`cd ${path.join(srcDir)} && ./zpki -y -c none create-crt "${uniqueCertName}"`, (error, stdout, stderr) => {
+            exec(`./zpki -y -c none create-crt "${uniqueCertName}"`, { cwd: srcDir }, (error, stdout, stderr) => {
                 if (error) {
                     return reject(`Creation error: ${stderr}`);
                 }
@@ -96,7 +96,7 @@ app.post('/revoke', (req, res) => {
 
     const revokeCert = (name) => {
         return new Promise((resolve, reject) => {
-            exec(`cd ${path.join(srcDir)} && ./zpki -y -c none ca-revoke-crt "${name}"`, (error, stdout, stderr) => {
+            exec(`./zpki -y -c none ca-revoke-crt "${name}"`, { cwd: srcDir }, (error, stdout, stderr) => {
                 if (error) {
                     return reject(`Revocation error: ${stderr}`);
                 }
@@ -106,8 +106,14 @@ app.post('/revoke', (req, res) => {
     };
 
     const processRevocations = async () => {
+        const certData = readCertData();
+        const certMap = new Map(certData.map(cert => [cert.id, cert]));
+
         try {
             for (const name of id) {
+                if (!certMap.has(name)) {
+                    return res.status(404).send(`Certificate with ID ${name} not found.`);
+                }
                 await revokeCert(name);
             }
             res.send('Revoked certificates.');
@@ -115,7 +121,6 @@ app.post('/revoke', (req, res) => {
             res.status(500).send(error);
         }
     };
-
     processRevocations();
 });
 
@@ -128,7 +133,7 @@ app.post('/renew', (req, res) => {
 
     const renewCert = (name) => {
         return new Promise((resolve, reject) => {
-            exec(`cd ${path.join(srcDir)} && ./zpki -y -c none ca-update-crt "${name}"`, (error, stdout, stderr) => {
+            exec(`./zpki -y -c none ca-update-crt "${name}"`, { cwd: srcDir }, (error, stdout, stderr) => {
                 if (error) {
                     return reject(`Renewal error: ${stderr}`);
                 }
@@ -138,8 +143,14 @@ app.post('/renew', (req, res) => {
     };
 
     const processRenewals = async () => {
+        const certData = readCertData();
+        const certMap = new Map(certData.map(cert => [cert.id, cert]));
+
         try {
             for (const name of id) {
+                if (!certMap.has(name)) {
+                    return res.status(404).send(`Certificate with ID ${name} not found.`);
+                }
                 await renewCert(name);
             }
             res.send('Renewed certificates.');
@@ -147,14 +158,13 @@ app.post('/renew', (req, res) => {
             res.status(500).send(error);
         }
     };
-
     processRenewals();
 });
 
 // Function to read and filter certificate data
 const readCertData = () => {
-    const idxPath = path.join(srcDir, 'ca.idx');
-    const idzPath = path.join(srcDir, 'ca.idz');
+    const idxPath = path.join(__dirname, 'src', 'ca.idx');
+    const idzPath = path.join(__dirname, 'src', 'ca.idz');
 
     if (!fs.existsSync(idxPath) || !fs.existsSync(idzPath)) {
         throw new Error('Missing ca.idx or ca.idz files.');
@@ -208,7 +218,7 @@ const readCertData = () => {
     const now = moment();
     const certificateData = Array.from(certMap.values()).map(cert => {
         if (moment(cert.endDate).isBefore(now)) {
-            cert.status = 'I'; // Invalid
+            cert.status = cert.status === 'R' ? 'R' : 'I';
         }
         return cert;
     }).filter(cert => 
@@ -220,6 +230,7 @@ const readCertData = () => {
     return certificateData;
 };
 
+// Localhost
 app.listen(port, () => {
     console.log(`Server started: http://localhost:${port}`);
 });
