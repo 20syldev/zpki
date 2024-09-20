@@ -40,10 +40,12 @@
             align-items: center;
         }
 
+        .dropdown #languageDropdown {
+            padding: 3px 10px;
+        }
         .dropdown-toggle {
             white-space: nowrap; 
         }
-
         .dropdown-menu {
             margin-top: 7px;
             border: 1px solid #ddd;
@@ -55,8 +57,16 @@
             cursor: pointer;
             transition: 0.3s;
         }
+        /* 
         .cert-checkbox.active {
             opacity: 0.5;
+        } 
+        */
+
+        .icon {
+            width: 1em;
+            height: 1em;
+            margin-top: -0.15em;
         }
 
         .btn {
@@ -136,14 +146,14 @@
 
                 <!-- Create a certificate -->
                 <div class="dropdown mr-2">
-                    <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fa fa-plus"></i>
+                    <button class="btn btn-primary m-0 dropdown-toggle" type="button" id="createDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <img src="src/images/plus-solid.svg" class="icon"/>
                     </button>
-                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                        <a class="dropdown-item" data-count="1">1 Certificate</a>
-                        <a class="dropdown-item" data-count="10">10 Certificates</a>
-                        <a class="dropdown-item" data-count="100">100 Certificates</a>
-                        <a class="dropdown-item" data-count="1000">1000 Certificates</a>
+                    <div class="dropdown-menu" aria-labelledby="createDropdown">
+                        <a class="dropdown-item create" data-count="1">1 Certificate</a>
+                        <a class="dropdown-item create" data-count="10">10 Certificates</a>
+                        <a class="dropdown-item create" data-count="100">100 Certificates</a>
+                        <a class="dropdown-item create" data-count="1000">1000 Certificates</a>
                     </div>
                 </div>
                 <input type="hidden" id="certCount" value="">
@@ -158,13 +168,22 @@
             <!-- Actions -->
             <div id="actionButtons" class="action-buttons">
                 <button id="revokeSelected" class="btn btn-dark btn-sm" hidden>
-                    <i class="mr-1 fa fa-ban"></i> Revoke
+                    <img src="src/images/ban-solid.svg" class="icon mr-1"/> Revoke
                 </button>
                 <button id="renewSelected" class="btn btn-dark btn-sm" hidden>
-                    <i class="mr-1 fa fa-rotate-right"></i> Renew
+                    <img src="src/images/plus-solid.svg" class="icon mr-1"/> Renew
                 </button>
-                <button id="refresh" class="btn btn-secondary btn-sm float-right">
-                    <i class="mr-1 fa fa-sync-alt"></i> Refresh
+                <div class="dropdown mr-2 float-right">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="languageDropdown" data-toggle="dropdown-lang" aria-haspopup="true" aria-expanded="false">
+                        <img src="src/images/globe-solid.svg" class="icon"/>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="languageDropdown" id="languageMenu">
+                        <a class="dropdown-item" data-lang="en">English</a>
+                        <a class="dropdown-item" data-lang="fr">Français</a>
+                    </div>
+                </div>
+                <button id="refresh" class="btn btn-secondary btn-sm float-right mr-1">
+                    <img src="src/images/rotate-solid.svg" class="icon mr-1"/> Refresh
                 </button>
             </div>
         </form>
@@ -173,14 +192,14 @@
         <table class="table table-bordered table-striped">
             <thead class="thead">
                 <tr>
-                    <th class="resizable" scope="col" data-sort="selectBox"><div class="sortable-handle"><i class="fa fa-square-check"></i></div></th>
-                    <th class="resizable" scope="col" data-sort="validity"><div class="sortable-handle"><i class="fa fa-chart-simple"></i></div></th>
-                    <th class="resizable" scope="col" data-sort="serial"><div class="sortable-handle"><i class="mr-1 fa fa-hashtag"></i> Serial</div></th>
-                    <th class="resizable" scope="col" data-sort="startDate"><div class="sortable-handle"><i class="mr-1 fa fa-calendar-day"></i> Start Date</div></th>
-                    <th class="resizable" scope="col" data-sort="endDate"><div class="sortable-handle"><i class="mr-1 fa fa-calendar-alt"></i> End Date</div></th>
-                    <th class="resizable" scope="col" data-sort="id"><div class="sortable-handle"><i class="mr-1 fa fa-file-alt"></i> ID</div></th>
-                    <th class="resizable" scope="col" data-sort="actions"><div class="sortable-handle"><i class="mr-1 fa fa-cogs"></i> Actions</div></th>
-                    <th class="resizable" scope="col" data-sort="downloads"><div class="sortable-handle"><i class="mr-1 fa fa-download"></i> Downloads</div></th>
+                    <th class="resizable" scope="col" data-sort="selectBox"><div class="sortable-handle"><img src="src/images/square-check-solid.svg" class="icon"/></div></th>
+                    <th class="resizable" scope="col" data-sort="validity"><div class="sortable-handle"><img src="src/images/chart-simple-solid.svg" class="icon"/></div></th>
+                    <th class="resizable" scope="col" data-sort="serial"><div class="sortable-handle"><img src="src/images/hashtag-solid.svg" class="icon mr-1"/> Serial</div></th>
+                    <th class="resizable" scope="col" data-sort="startDate"><div class="sortable-handle"><img src="src/images/calendar-day-solid.svg" class="icon mr-1"/> Start Date</div></th>
+                    <th class="resizable" scope="col" data-sort="endDate"><div class="sortable-handle"><img src="src/images/calendar-days-solid.svg" class="icon mr-1"/> End Date</div></th>
+                    <th class="resizable" scope="col" data-sort="id"><div class="sortable-handle"><img src="src/images/file-lines-solid.svg" class="icon mr-1"/> ID</div></th>
+                    <th class="resizable" scope="col" data-sort="actions"><div class="sortable-handle"><img src="src/images/gear-solid.svg" class="icon mr-2"/>Actions</div></th>
+                    <th class="resizable" scope="col" data-sort="downloads"><div class="sortable-handle"><img src="src/images/download-solid.svg" class="icon mr-1"/> Downloads</div></th>
                 </tr>
             </thead>
             <tbody id="certTableBody">
@@ -189,18 +208,17 @@
         </table>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/js/all.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const dropdownItems = document.querySelectorAll('.dropdown-item');
-            const dropdownButton = document.getElementById('dropdownMenuButton');
+            const dropdownItems = document.querySelectorAll('.create');
+            const dropdownButton = document.getElementById('createDropdown');
             const certCountInput = document.getElementById('certCount');
             const certNameInput = document.getElementById('certName');
             const certSearchInput = document.getElementById('certSearch');
             const certTableBody = document.getElementById('certTableBody');
             const refreshButton = document.getElementById('refresh');
-            const renewSelectedButton = document.getElementById('renewSelected');
             const revokeSelectedButton = document.getElementById('revokeSelected');
+            const renewSelectedButton = document.getElementById('renewSelected');
 
             // Check if input is empty or not
             function toggleCreateButton() {
@@ -225,7 +243,7 @@
                     .normalize('NFD')
                     .replace(/[\u0300-\u036f]/g, '')
                     .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9-_]/g, '');
+                    .replace(/[^a-zA-Z0-9-_]/g, '');
             }
 
             // Format date to YYYY/MM/DD from ISO format
@@ -246,49 +264,24 @@
                 }
             }
 
-            // Get validity order in sort
-            function getValidityOrder(status) {
-                switch (status) {
-                    case 'V': return 1; // Valid
-                    case 'I': return 2; // Invalid
-                    case 'R': return 3; // Revoked
-                    default: return 4; // Unknown
-                }
-            }
-
             function sortTable(columnIndex, order) {
                 const rows = Array.from(certTableBody.querySelectorAll('tr'));                
                 rows.sort((a, b) => {
                     const cellA = a.querySelector(`td:nth-child(${columnIndex})`);
                     const cellB = b.querySelector(`td:nth-child(${columnIndex})`);
 
-                    if (columnIndex === 1) {
-                        const statusA = cellA.querySelector('button').getAttribute('data-status');
-                        const statusB = cellB.querySelector('button').getAttribute('data-status');
-
-                        const orderA = getValidityOrder(statusA);
-                        const orderB = getValidityOrder(statusB);
-                        
-                        if (order === 'asc') {
-                            return orderA - orderB;
-                        } else {
-                            return orderB - orderA;
-                        }
+                    const textA = cellA.textContent.trim();
+                    const textB = cellB.textContent.trim();
+                    if (order === 'asc') {
+                        return textA.localeCompare(textB, undefined, { numeric: true });
                     } else {
-                        const textA = cellA.textContent.trim();
-                        const textB = cellB.textContent.trim();
-                        if (order === 'asc') {
-                            return textA.localeCompare(textB, undefined, { numeric: true });
-                        } else {
-                            return textB.localeCompare(textA, undefined, { numeric: true });
-                        }
+                        return textB.localeCompare(textA, undefined, { numeric: true });
                     }
                 });
-
                 rows.forEach(row => certTableBody.appendChild(row));
             }
 
-            // Load data from files, update table & check checkboxes
+            // Load data from files, create and update table & check checkboxes
             function loadCertData() {
                 fetch('/list')
                     .then(response => response.json())
@@ -297,13 +290,12 @@
                         data.forEach(cert => {
                             const status = cert.status;
                             const validityColor = status === 'I' ? 'warning' : (status !== 'R' ? 'success' : 'danger');
-                            const validityText = status === 'I' ? 'Invalid' : (status !== 'R' ? 'Valid' : 'Revoked');
-                            const validityBtn = status === 'I' ? '<i class="mr-1 fa fa-triangle-exclamation"></i> Invalid' : (status !== 'R' ? '<i class="mr-1 fa fa-circle-check"></i> Valid' : '<i class="mr-1 fa fa-times-circle"></i> Revoked');
+                            const validityBtn = status === 'I' ? '<img src="src/images/triangle-exclamation-solid.svg" class="icon mr-1"/> Expired' : (status !== 'R' ? '<img src="src/images/circle-check-solid.svg" class="icon mr-1"/> Valid' : '<img src="src/images/circle-xmark-solid.svg" class="icon mr-1"/> Revoked');
 
                             const row = document.createElement('tr');
                             row.innerHTML = `
-                                <td><button class="btn btn-dark btn-sm cert-checkbox"><i class="fa fa-minus"></i></button></td>
-                                <td><button class="btn btn-${validityColor} btn-sm" data-id="${cert.id}">${validityBtn}</button></td>
+                                <td><button class="btn btn-dark btn-sm cert-checkbox"${status === 'R' ? 'disabled' : ''}><img src="src/images/${status === 'R' ? 'ban' : 'minus'}-solid.svg" class="icon"/></button></td>
+                                <td><button class="btn btn-${validityColor} btn-sm w-100" data-id="${cert.id}">${validityBtn}</button></td>
                                 <td>
                                     <span class="tooltip-container" data-toggle="tooltip" data-html="true" data-placement="bottom" 
                                     title="<div>Signature: ${cert.signature}</div>">
@@ -318,13 +310,13 @@
                                 </td>
                                 <td>${cert.id}</td>
                                 <td>
-                                    <button class="btn btn-dark btn-sm" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><i class="mr-1 fa fa-ban"></i> Revoke</button>
-                                    <button class="btn btn-dark btn-sm" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><i class="mr-1 fa fa-rotate-right"></i> Renew</button>
+                                    <button class="btn btn-dark btn-sm" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/ban-solid.svg" class="icon mr-1"/> Revoke</button>
+                                    <button class="btn btn-dark btn-sm" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/rotate-right-solid.svg" class="icon mr-1"/> Renew</button>
                                 </td>
                                 <td>
-                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download><i class="mr-1 fas fa-file-download"></i> .crt</a>
-                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.csr" download><i class="mr-1 fas fa-file-download"></i> .csr</a>
-                                    <a class="btn btn-info btn-sm" href="/src/private/${cert.id}.key" download><i class="mr-1 fas fa-file-download"></i> .key</a>
+                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.crt</a>
+                                    <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.csr" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.csr</a>
+                                    <a class="btn btn-info btn-sm" href="/src/private/${cert.id}.key" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.key</a>
                                 </td>
                             `;
                             certTableBody.appendChild(row);
@@ -337,9 +329,9 @@
                                 updateActionButtons();
 
                                 if (this.classList.contains('active')) {
-                                    this.innerHTML = '<i class="fa fa-check"></i>';
+                                    this.innerHTML = '<img src="src/images/check-solid.svg" class="icon"/>';
                                 } else {
-                                    this.innerHTML = '<i class="fa fa-minus"></i>';
+                                    this.innerHTML = '<img src="src/images/minus-solid.svg" class="icon"/>';
                                 }
                             });
                         });
@@ -395,13 +387,20 @@
             refreshButton.addEventListener('click', function(event) {
                 event.preventDefault();
                 loadCertData();
-                refreshButton.classList.add('btn-success');
-                refreshButton.innerHTML = '<i class="mr-1 fa fa-square-check"></i> Done!';
+                refreshButton.disabled = true;
+                refreshButton.querySelector('img').style.transition = '1s ease-in-out';
+                refreshButton.querySelector('img').style.transform = 'rotate(720deg)';
+
+                setTimeout(() => {
+                    refreshButton.classList.add('btn-success');
+                    refreshButton.innerHTML = '<img src="src/images/square-check-white-solid.svg" class="icon mr-1"/> Done!';
+                }, 1200);
                 
                 setTimeout(() => {
-                    refreshButton.innerHTML = '<i class="mr-1 fa fa-sync-alt"></i> Refresh';
                     refreshButton.classList.remove('btn-success');
-                }, 1300);
+                    refreshButton.innerHTML = '<img src="src/images/rotate-solid.svg" class="icon mr-1"/> Refresh';
+                    refreshButton.disabled = false;
+                }, 3000);
             });
 
             // Renew multiple certificates
@@ -446,7 +445,7 @@
                         items: 'th',
                         handle: '.sortable-handle',
                         cursor: 'move',
-                        axis: 'x',
+                        
                         start: function(event, ui) {
                             ui.placeholder.height(ui.helper.outerHeight());
                         },
