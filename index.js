@@ -94,6 +94,11 @@ app.post('/revoke', (req, res) => {
         return res.status(400).send('List of invalid certificates.');
     }
 
+    // Validate certificate name
+    if (!validateCertName(certName)) {
+        return res.status(400).send('Invalid certificate name. Only alphanumeric characters, hyphens, and underscores are allowed.');
+    }
+
     const revokeCert = (name) => {
         return new Promise((resolve, reject) => {
             exec(`./zpki -y -c none ca-revoke-crt "${name}"`, { cwd: srcDir }, (error, stdout, stderr) => {
@@ -129,6 +134,11 @@ app.post('/renew', (req, res) => {
     const { id } = req.body;
     if (!Array.isArray(id)) {
         return res.status(400).send('List of invalid certificates.');
+    }
+
+    // Validate certificate name
+    if (!validateCertName(certName)) {
+        return res.status(400).send('Invalid certificate name. Only alphanumeric characters, hyphens, and underscores are allowed.');
     }
 
     const renewCert = (name) => {
