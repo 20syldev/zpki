@@ -91,12 +91,13 @@ app.get('/create', async (req, res) => {
 app.post('/revoke', (req, res) => {
     const { id } = req.body;
     if (!Array.isArray(id)) {
-        return res.status(400).send('List of invalid certificates.');
+        return res.status(400).send('Invalid list of certificates.');
     }
 
-    // Validate certificate name
-    if (!validateCertName(certName)) {
-        return res.status(400).send('Invalid certificate name. Only alphanumeric characters, hyphens, and underscores are allowed.');
+    for (const name of id) {
+        if (!validateCertName(name)) {
+            return res.status(400).send(`Invalid certificate name: ${name}. Only alphanumeric characters, hyphens, and underscores are allowed.`);
+        }
     }
 
     const revokeCert = (name) => {
@@ -121,7 +122,7 @@ app.post('/revoke', (req, res) => {
                 }
                 await revokeCert(name);
             }
-            res.send('Revoked certificates.');
+            res.send('Certificates revoked.');
         } catch (error) {
             res.status(500).send(error);
         }
@@ -133,12 +134,13 @@ app.post('/revoke', (req, res) => {
 app.post('/renew', (req, res) => {
     const { id } = req.body;
     if (!Array.isArray(id)) {
-        return res.status(400).send('List of invalid certificates.');
+        return res.status(400).send('Invalid list of certificates.');
     }
 
-    // Validate certificate name
-    if (!validateCertName(certName)) {
-        return res.status(400).send('Invalid certificate name. Only alphanumeric characters, hyphens, and underscores are allowed.');
+    for (const name of id) {
+        if (!validateCertName(name)) {
+            return res.status(400).send(`Invalid certificate name: ${name}. Only alphanumeric characters, hyphens, and underscores are allowed.`);
+        }
     }
 
     const renewCert = (name) => {
@@ -163,7 +165,7 @@ app.post('/renew', (req, res) => {
                 }
                 await renewCert(name);
             }
-            res.send('Renewed certificates.');
+            res.send('Certificates renewed.');
         } catch (error) {
             res.status(500).send(error);
         }
