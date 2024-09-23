@@ -174,7 +174,7 @@
                     <img src="src/images/plus-solid.svg" class="icon mr-1"/> Renew
                 </button>
                 <div class="dropdown mr-2 float-right">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" id="languageDropdown" data-toggle="dropdown-lang" aria-haspopup="true" aria-expanded="false">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="languageDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <img src="src/images/globe-solid.svg" class="icon"/>
                     </button>
                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="languageDropdown" id="languageMenu">
@@ -210,8 +210,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const dropdownItems = document.querySelectorAll('.create');
-            const dropdownButton = document.getElementById('createDropdown');
+            const createItems = document.querySelectorAll('.create');
+            const createDropdown = document.getElementById('createDropdown');
             const certCountInput = document.getElementById('certCount');
             const certNameInput = document.getElementById('certName');
             const certSearchInput = document.getElementById('certSearch');
@@ -223,9 +223,9 @@
             // Check if input is empty or not
             function toggleCreateButton() {
                 if (certNameInput.value.trim() === "") {
-                    dropdownButton.disabled = true;
+                    createDropdown.disabled = true;
                 } else {
-                    dropdownButton.disabled = false;
+                    createDropdown.disabled = false;
                 }
             }
             toggleCreateButton();
@@ -345,13 +345,13 @@
             certNameInput.addEventListener('input', toggleCreateButton);
 
             // Dropdown menu to generate a specific number of certificates
-            dropdownItems.forEach(item => {
+            createItems.forEach(item => {
                 item.addEventListener('click', function() {
                     const certCount = this.getAttribute('data-count');
                     const certName = encodeName(certNameInput.value);
                     certCountInput.value = certCount;
 
-                    dropdownButton.setAttribute('disabled', 'true');
+                    createDropdown.setAttribute('disabled', 'true');
 
                     // Request create a certificate
                     fetch(`/create?name=${encodeURIComponent(certName)}&count=${certCount}`)
@@ -361,7 +361,7 @@
                         })
                         .finally(() => {
                             setTimeout(() => {
-                                dropdownButton.removeAttribute('disabled');
+                                createDropdown.removeAttribute('disabled');
                             }, 3000);
                         });
                 });
