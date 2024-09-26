@@ -1,288 +1,398 @@
-const { spawn } = require('child_process');
-
-const fs = require('fs');
-const path = require('path');
-
-// Need installation via npm
-const express = require('express');
-const cors = require('cors');
-const moment = require('moment');
-
-// Set basic variables
-const app = express();
-const port = 3000;
-const srcDir = path.join(__dirname, 'src');
-
-// Setup express & cors
-app.use(express.static(__dirname));
-app.use('/src', express.static(srcDir));
-app.use(express.json());
-app.use(cors());
-
-// Function to find a unique certificate name
-const findUniqueCertName = (baseName) => {
-    let uniqueName = baseName;
-    let index = 1;
-    while (fs.existsSync(path.join(__dirname, 'src', 'certs', `${uniqueName}.crt`))) {
-        uniqueName = `${baseName}${index}`;
-        index++;
-    }
-    return uniqueName;
-};
-
-// Function to validate certificate name
-const validateCertName = (name) => {
-    const regex = /^[a-zA-Z0-9-_]+$/;
-    return regex.test(name);
-};
-
-// Route to serve index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Route to get the list of certificates
-app.get('/list', (req, res) => {
-    try {
-        const certData = readCertData();
-        res.json(certData);
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-});
-
-// Route to create certificates
-app.get('/create', async (req, res) => {
-    const certName = req.query.name;
-    const count = parseInt(req.query.count) || 1;
-    let generatedCount = 0;
-
-    // Validate certificate name
-    if (!validateCertName(certName)) {
-        return res.status(400).json({ error: 'Invalid certificate name. Only alphanumeric characters, hyphens, and underscores are allowed.' }, null, 2);
-    }
-
-    const createCert = (uniqueCertName) => {
-        return new Promise((resolve, reject) => {
-            const process = spawn('./zpki', ['-y', '-c', 'none', 'create-crt', uniqueCertName], { cwd: srcDir });
-
-            let stdout = '';
-            let stderr = '';
-
-            process.stdout.on('data', (data) => {
-                stdout += data.toString();
-            });
-
-            process.stderr.on('data', (data) => {
-                stderr += data.toString();
-            });
-
-            process.on('close', (code) => {
-                if (code !== 0) {
-                    return reject(`Creation error: ${stderr}`);
-                }
-                resolve(stdout);
-            });
-        });
+document.addEventListener('DOMContentLoaded', function() {
+    const createItems = document.querySelectorAll('.create');
+    const createDropdown = document.getElementById('createDropdown');
+    const certCountInput = document.getElementById('certCount');
+    const certNameInput = document.getElementById('certName');
+    const certSearchInput = document.getElementById('certSearch');
+    const certTableBody = document.getElementById('certTableBody');
+    const refreshButton = document.getElementById('refresh');
+    const revokeSelectedButton = document.getElementById('revokeSelected');
+    const renewSelectedButton = document.getElementById('renewSelected');
+    const texts = {
+        en: {
+            certificateNamePlaceholder: "Certificate name (ex: John Doe)",
+            searchPlaceholder: "Search for a certificate",
+            revoke: "Revoke",
+            renew: "Renew",
+            oneCertificate: "1 Certificate",
+            tenCertificates: "10 Certificates",
+            hundredCertificates: "100 Certificates",
+            thousandCertificates: "1000 Certificates",
+            refresh: "Refresh",
+            done: "Done!",
+            validityBtn: {
+                valid: "Valid",
+                expired: "Expired",
+                revoked: "Revoked",
+                unknown: "Unknown"
+            },
+            serial: "Serial",
+            startDate: "Start Date",
+            endDate: "End Date",            
+            actions: "Actions",
+            downloads: "Downloads"
+        },
+        fr: {
+            certificateNamePlaceholder: "Nom du certificat (ex: John Doe)",
+            searchPlaceholder: "Rechercher un certificat",
+            revoke: "Révoquer",
+            renew: "Renouveler",
+            oneCertificate: "1 Certificat",
+            tenCertificates: "10 Certificats",
+            hundredCertificates: "100 Certificats",
+            thousandCertificates: "1000 Certificats",
+            refresh: "Rafraîchir",
+            done: "Terminé !",
+            validityBtn: {
+                valid: "Valide",
+                expired: "Expiré",
+                revoked: "Révoqué",
+                unknown: "Inconnu"
+            },
+            serial: "Numéro de série",
+            startDate: "Date de début",
+            endDate: "Date de fin",            
+            actions: "Actions",
+            downloads: "Téléchargements"
+        }
     };
 
-    const processCerts = async () => {
-        try {
-            for (let i = 1; i <= count; i++) {
-                const uniqueCertName = findUniqueCertName(certName);
-                await createCert(uniqueCertName);
-                generatedCount++;
+    // Set default language from localStorage or use English as default
+    let lang = localStorage.getItem('language') || 'en';
+    updateLanguage(lang);
+
+    // Language switcher
+    $('#languageMenu .dropdown-item').click(function () {
+        lang = $(this).data('lang');
+        localStorage.setItem('language', lang);
+        updateLanguage(lang);
+        loadCertData();
+    });
+
+    // Update the language
+    function updateLanguage(lang) {
+        setTimeout(() => {
+            // Update top page content
+            $('#certName').attr('placeholder', texts[lang].certificateNamePlaceholder);
+            $('#certSearch').attr('placeholder', texts[lang].searchPlaceholder);
+            $('#revokeSelected').html(`<img src="src/images/ban-solid.svg" class="icon mr-1"/> ${texts[lang].revoke}`);
+            $('#renewSelected').html(`<img src="src/images/rotate-right-solid.svg" class="icon mr-1"/> ${texts[lang].renew}`);
+            $('#refresh').html(`<img src="src/images/rotate-solid.svg" class="icon mr-1"/> ${texts[lang].refresh}`);
+
+            // Update dropdown items
+            $('.create[data-count="1"]').text(texts[lang].oneCertificate);
+            $('.create[data-count="10"]').text(texts[lang].tenCertificates);
+            $('.create[data-count="100"]').text(texts[lang].hundredCertificates);
+            $('.create[data-count="1000"]').text(texts[lang].thousandCertificates);
+            
+            // Update table headers
+            $('th[data-sort="serial"]').html(`<img src="src/images/hashtag-solid.svg" class="icon mr-1"/> ${texts[lang].serial}`);
+            $('th[data-sort="startDate"]').html(`<img src="src/images/calendar-day-solid.svg" class="icon mr-1"/> ${texts[lang].startDate}`);
+            $('th[data-sort="endDate"]').html(`<img src="src/images/calendar-days-solid.svg" class="icon mr-1"/> ${texts[lang].endDate}`);
+            $('th[data-sort="actions"]').html(`<img src="src/images/gear-solid.svg" class="icon mr-1"/> ${texts[lang].actions}`);
+            $('th[data-sort="downloads"]').html(`<img src="src/images/download-solid.svg" class="icon mr-1"/> ${texts[lang].downloads}`);
+        }, 50);
+    }
+
+    // Adapt name, normalize
+    function encodeName(name) {
+        return name
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/[^a-zA-Z0-9-_]/g, '');
+    }
+
+    // Format date to YYYY/MM/DD from ISO format
+    function formatDate(isoDateString) {
+        const date = new Date(isoDateString);
+        return date.toLocaleDateString('fr-CA');
+    }
+    
+    // Update actions buttons
+    function updateActionButtons() {
+        const selectedCerts = document.querySelectorAll('.cert-checkbox.active');
+        if (selectedCerts.length > 0) {
+            revokeSelectedButton.hidden = false;
+            renewSelectedButton.hidden = false;
+        } else {
+            revokeSelectedButton.hidden = true;
+            renewSelectedButton.hidden = true;
+        }
+    }
+
+    // Sort columns
+    function sortTable(columnIndex, order) {
+        const rows = Array.from(certTableBody.querySelectorAll('tr'));                
+        rows.sort((a, b) => {
+            const cellA = a.querySelector(`td:nth-child(${columnIndex})`);
+            const cellB = b.querySelector(`td:nth-child(${columnIndex})`);
+
+            const textA = cellA.textContent.trim();
+            const textB = cellB.textContent.trim();
+            if (order === 'asc') {
+                return textA.localeCompare(textB, undefined, { numeric: true });
+            } else {
+                return textB.localeCompare(textA, undefined, { numeric: true });
             }
-            res.json({ response: `${generatedCount}/${count} certificates generated.` }, null, 2);
-        } catch (error) {
-            res.status(500).json({ error: error.message }, null, 2);
-        }
-    };
-    processCerts();
-});
-
-// Route to revoke certificates
-app.post('/revoke', (req, res) => {
-    const { id } = req.body;
-    if (!Array.isArray(id)) {
-        return res.status(400).json({ error: 'Invalid list of certificates.' }, null, 2);
-    }
-
-    for (const name of id) {
-        if (!validateCertName(name)) {
-            return res.status(400).json({ error: `Invalid certificate name: ${name}. Only alphanumeric characters, hyphens, and underscores are allowed.` }, null, 2);
-        }
-    }
-
-    const revokeCert = (name) => {
-        return new Promise((resolve, reject) => {
-            const process = spawn('./zpki', ['-y', '-c', 'none', 'ca-revoke-crt', name], { cwd: srcDir });
-
-            let stdout = '';
-            let stderr = '';
-
-            process.stdout.on('data', (data) => {
-                stdout += data.toString();
-            });
-
-            process.stderr.on('data', (data) => {
-                stderr += data.toString();
-            });
-
-            process.on('close', (code) => {
-                if (code !== 0) {
-                    return reject(`Revocation error: ${stderr}`);
-                }
-                resolve(stdout);
-            });
         });
-    };
-
-    const processRevocations = async () => {
-        const certData = readCertData();
-        const certMap = new Map(certData.map(cert => [cert.id, cert]));
-
-        try {
-            for (const name of id) {
-                if (!certMap.has(name)) {
-                    return res.status(404).json({ error: `Certificate with ID ${name} not found.` }, null, 2);
-                }
-                await revokeCert(name);
-            }
-            res.json({ response: 'Certificates revoked.' }, null, 2);
-        } catch (error) {
-            res.status(500).json({ error: error.message }, null, 2);
-        }
-    };
-    processRevocations();
-});
-
-// Route to renew certificates
-app.post('/renew', (req, res) => {
-    const { id } = req.body;
-    if (!Array.isArray(id)) {
-        return res.status(400).json({ error: 'Invalid list of certificates.' }, null, 2);
+        rows.forEach(row => certTableBody.appendChild(row));
     }
 
-    for (const name of id) {
-        if (!validateCertName(name)) {
-            return res.status(400).json({ error: `Invalid certificate name: ${name}. Only alphanumeric characters, hyphens, and underscores are allowed.` }, null, 2);
+    // Load data from files, create and update table & check checkboxes
+    function loadCertData() {
+        fetch('/list')
+            .then(response => response.json())
+            .then(data => {
+                certTableBody.innerHTML = '';
+                data.forEach(cert => {
+                    const status = cert.status;
+                    let validityColor, validityBtn, validityText;
+
+                    // Determine validity color and button text based on the status
+                    if (status === 'V') {
+                        validityColor = 'success';
+                        validityText = texts[lang].validityBtn.valid;
+                        validityBtn = `<img src="src/images/circle-check-solid.svg" class="icon mr-1"/> ${validityText}`;
+                    } else if (status === 'I') {
+                        validityColor = 'warning';
+                        validityText = texts[lang].validityBtn.expired;
+                        validityBtn = `<img src="src/images/triangle-exclamation-solid.svg" class="icon mr-1"/> ${validityText}`;
+                    } else if (status === 'R') {
+                        validityColor = 'danger';
+                        validityText = texts[lang].validityBtn.revoked;
+                        validityBtn = `<img src="src/images/circle-xmark-solid.svg" class="icon mr-1"/> ${validityText}`;
+                    } else {
+                        validityColor = 'secondary';
+                        validityText = texts[lang].validityBtn.unknown;
+                        validityBtn = `<img src="src/images/question-solid.svg" class="icon mr-1"/> ${validityText}`;
+                    }
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><button class="btn btn-dark btn-sm cert-checkbox" data-id="${cert.id}" ${status === 'R' ? 'disabled' : ''}><img src="src/images/${status === 'R' ? 'ban' : 'minus'}-solid.svg" class="icon"/></button></td>
+                        <td><button class="btn btn-${validityColor} btn-sm w-100" data-id="${cert.id}">${validityBtn}</button></td>
+                        <td><span class="tooltip-container" data-toggle="tooltip" data-html="true" data-placement="bottom" title="<div>Signature: ${cert.signature}</div>">${cert.serial}</span></td>
+                        <td><span class="tooltip-container" data-toggle="tooltip" data-placement="bottom" title="${cert.startDate}">${formatDate(cert.startDate)}</span></td>
+                        <td><span class="tooltip-container" data-toggle="tooltip" data-placement="bottom" title="${cert.endDate}">${formatDate(cert.endDate)}</span></td>
+                        <td>${cert.id}</td>
+                        <td>
+                            <button class="btn btn-dark btn-sm revoke" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/ban-solid.svg" class="icon mr-1"/> ${texts[lang].revoke}</button>
+                            <button class="btn btn-dark btn-sm renew" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/rotate-right-solid.svg" class="icon mr-1"/> ${texts[lang].renew}</button>
+                        </td>
+                        <td>
+                            <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.crt</a>
+                            <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.csr" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.csr</a>
+                            <a class="btn btn-info btn-sm" href="/src/private/${cert.id}.key" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.key</a>
+                        </td>
+                    `;
+                    certTableBody.appendChild(row);
+                });
+
+                // Add event listeners for cert checkboxes
+                const certButtons = document.querySelectorAll('.cert-checkbox');
+                certButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        this.classList.toggle('active');
+                        updateActionButtons();
+
+                        if (this.classList.contains('active')) {
+                            this.innerHTML = '<img src="src/images/check-solid.svg" class="icon"/>';
+                        } else {
+                            this.innerHTML = '<img src="src/images/minus-solid.svg" class="icon"/>';
+                        }
+                    });
+                });
+                updateActionButtons();
+                initializeTooltips();
+            })
+            .catch(error => console.error('Certificate loading error:', error));
+    }
+
+    // Check if input is empty or not
+    function toggleCreateButton() {
+        if (certNameInput.value.trim() === "") {
+            createDropdown.disabled = true;
+        } else {
+            createDropdown.disabled = false;
         }
     }
 
-    const renewCert = (name) => {
-        return new Promise((resolve, reject) => {
-            const process = spawn('./zpki', ['-y', '-c', 'none', 'ca-update-crt', name], { cwd: srcDir });
-
-            let stdout = '';
-            let stderr = '';
-
-            process.stdout.on('data', (data) => {
-                stdout += data.toString();
-            });
-
-            process.stderr.on('data', (data) => {
-                stderr += data.toString();
-            });
-
-            process.on('close', (code) => {
-                if (code !== 0) {
-                    return reject(`Renewal error: ${stderr}`);
-                }
-                resolve(stdout);
-            });
+    // Initialize tool tips
+    function initializeTooltips() {
+        $('[data-toggle="tooltip"]').tooltip({
+            html: true
         });
-    };
-
-    const processRenewals = async () => {
-        const certData = readCertData();
-        const certMap = new Map(certData.map(cert => [cert.id, cert]));
-
-        try {
-            for (const name of id) {
-                if (!certMap.has(name)) {
-                    return res.status(404).json({ error: `Certificate with ID ${name} not found.` }, null, 2);
-                }
-                await renewCert(name);
-            }
-            res.json({ response: 'Certificates renewed.' }, null, 2);
-        } catch (error) {
-            res.status(500).json({ error: error.message }, null, 2);
-        }
-    };
-    processRenewals();
-});
-
-// Function to read and filter certificate data
-const readCertData = () => {
-    const idxPath = path.join(__dirname, 'src', 'ca.idx');
-    const idzPath = path.join(__dirname, 'src', 'ca.idz');
-
-    if (!fs.existsSync(idxPath) || !fs.existsSync(idzPath)) {
-        throw new Error('Missing ca.idx or ca.idz files.');
     }
 
-    const idxData = fs.readFileSync(idxPath, 'utf8');
-    const idzData = fs.readFileSync(idzPath, 'utf8');
+    // Update create button based on input
+    certNameInput.addEventListener('input', toggleCreateButton);
 
-    const idxLines = idxData.split('\n').filter(line => line.trim() !== '');
-    const idzLines = idzData.split('\n').filter(line => line.trim() !== '');
+    // Dropdown menu to generate a specific number of certificates
+    createItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const certCount = this.getAttribute('data-count');
+            const certName = encodeName(certNameInput.value);
+            certCountInput.value = certCount;
 
-    const certMap = new Map();
+            createDropdown.setAttribute('disabled', 'true');
 
-    const parseCN = (str) => {
-        const match = str.match(/\/CN=([\s\S]*?)(?:\/|$)/);
-        return match ? match[1].trim() : '';
-    };
+            // Request create a certificate
+            fetch(`/create?name=${encodeURIComponent(certName)}&count=${certCount}`)
+                .then(response => response.text())
+                .catch(error => {
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        createDropdown.removeAttribute('disabled');
+                    }, 3000);
+                });
+        });
+    });
 
-    idxLines.forEach(line => {
-        const parts = line.trim().split('\t');
-        if (parts.length >= 5) {
-            const status = parts[0];
-            const expiration = parts[1];
-            const serial = parts[3];
-            const subject = parts[4] !== 'unknown' ? parseCN(parts[4]) : '';
-            certMap.set(serial, { 
-                status,
-                expiration,
-                id: subject
+    // Filter certificates by name
+    certSearchInput.addEventListener('input', function() {
+        const searchText = encodeName(this.value).toLowerCase();
+        const rows = certTableBody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            let match = false;
+            cells.forEach(cell => {
+                if (encodeName(cell.textContent).toLowerCase().includes(searchText)) {
+                    match = true;
+                }
             });
+            row.style.display = match ? '' : 'none';
+        });
+    });
+    
+    // Refreshing the table
+    refreshButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        loadCertData();
+        refreshButton.disabled = true;
+        refreshButton.querySelector('img').style.transition = '1s ease-in-out';
+        refreshButton.querySelector('img').style.transform = 'rotate(720deg)';
+
+        setTimeout(() => {
+            refreshButton.classList.add('btn-success');
+            refreshButton.innerHTML = `<img src="src/images/square-check-white-solid.svg" class="icon mr-1"/> ${texts[lang].done}`;
+        }, 1000);
+        
+        setTimeout(() => {
+            refreshButton.classList.remove('btn-success');
+            refreshButton.innerHTML = `<img src="src/images/rotate-solid.svg" class="icon mr-1"/> ${texts[lang].refresh}`;
+            refreshButton.disabled = false;
+        }, 2500);
+    });
+
+    // Renew multiple certificates
+    renewSelectedButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        const selectedCerts = Array.from(document.querySelectorAll('.cert-checkbox.active')).map(button => button.getAttribute('data-id'));
+        if (selectedCerts.length > 0) {
+            fetch('/renew', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: selectedCerts })
+            })
+            .then(response => response.text())
+            .then(() => loadCertData())
+            .catch(error => console.error('Renewal error:', error));
         }
     });
 
-    idzLines.forEach(line => {
-        const parts = line.trim().split('\t');
-        if (parts.length >= 6) {
-            const serial = parts[0];
-            if (certMap.has(serial)) {
-                const cert = certMap.get(serial);
-                cert.serial = serial;
-                cert.signature = parts[1];
-                cert.startDate = parts[2];
-                cert.endDate = parts[3];
-                cert.id = parts[4] !== 'unknown' ? parseCN(parts[4]) : cert.id;
-                certMap.set(serial, cert);
-            }
+    // Revoke multiple certificates
+    revokeSelectedButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        const selectedCerts = Array.from(document.querySelectorAll('.cert-checkbox.active')).map(button => button.getAttribute('data-id'));
+        if (selectedCerts.length > 0) {
+            fetch('/revoke', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: selectedCerts })
+            })
+            .then(response => response.text())
+            .then(() => loadCertData())
+            .catch(error => console.error('Revocation error:', error));
         }
     });
 
-    // Update status if expiration date is in the past
-    const now = moment();
-    const certificateData = Array.from(certMap.values()).map(cert => {
-        if (moment(cert.endDate).isBefore(now)) {
-            cert.status = cert.status === 'R' ? 'R' : 'I';
-        }
-        return cert;
-    }).filter(cert => 
-        cert.id && cert.id !== 'undefined' &&
-        cert.status && cert.expiration && cert.serial &&
-        cert.startDate && cert.endDate
-    );
+    // JQuery
+    $(document).ready(function() {
+        $("table thead").sortable({
+            items: 'th',
+            handle: '.sortable-handle',
+            cursor: 'move',
+            
+            start: function(event, ui) {
+                ui.placeholder.height(ui.helper.outerHeight());
+            },
+            stop: function(event, ui) {
+                const newOrder = $("table thead th").map(function() {
+                    return $(this).index();
+                }).get();
 
-    return certificateData;
-};
+                $("table thead").html(
+                    $("table thead th").sort(function(a, b) {
+                        return newOrder[$(a).index()] - newOrder[$(b).index()];
+                    }).toArray()
+                );
 
-// Localhost
-app.listen(port, () => {
-    console.log(`Server started: http://localhost:${port}`);
+                $("table tbody").each(function() {
+                    $(this).children("tr").each(function() {
+                        const cells = $(this).children("td").toArray();
+                        const reorderedCells = newOrder.map(index => cells[index]);
+                        $(this).empty().append(reorderedCells);
+                    });
+                });
+            }
+        }).disableSelection();
+    });
+
+    // Sorting columns
+    document.querySelectorAll('thead th').forEach((header, index) => {
+        header.addEventListener('click', function() {
+            const currentOrder = this.classList.contains('asc') ? 'desc' : 'asc';
+            sortTable(index + 1, currentOrder);
+            document.querySelectorAll('thead th').forEach(th => th.classList.remove('asc', 'desc'));
+            this.classList.add(currentOrder);
+        });
+    });
+
+    // Renew one certificate
+    window.renewCert = function(id) {
+        fetch('/renew', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: [id] })
+        })
+        .then(response => response.text())
+        .then(() => loadCertData())
+        .catch(error => console.error('Renewal error:', error));
+    };
+
+    // Revoke one certificate
+    window.revokeCert = function(id) {
+        fetch('/revoke', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: [id] })
+        })
+        .then(response => response.text())
+        .then(() => loadCertData())
+        .catch(error => console.error('Revocation error:', error));
+    };
+
+    loadCertData();
+    toggleCreateButton();
 });
