@@ -93,7 +93,7 @@ app.get('/create', async (req, res) => {
                 await createCert(uniqueCertName);
                 generatedCount++;
             }
-            res.json({ response: `${generatedCount}/${count} certificates generated.` }, null, 2); // Pretty print here
+            res.json({ response: `${generatedCount}/${count} certificates generated.` }, null, 2);
         } catch (error) {
             res.status(500).json({ error: error.message }, null, 2);
         }
