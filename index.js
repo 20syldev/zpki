@@ -14,6 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
             searchPlaceholder: "Search for a certificate",
             revoke: "Revoke",
             renew: "Renew",
+            lang: {
+                english: "English",
+                french: "French",
+                spanish: "Spanish",
+                german: "German"
+            },
             oneCertificate: "1 Certificate",
             tenCertificates: "10 Certificates",
             hundredCertificates: "100 Certificates",
@@ -37,6 +43,12 @@ document.addEventListener('DOMContentLoaded', function() {
             searchPlaceholder: "Rechercher un certificat",
             revoke: "Révoquer",
             renew: "Renouveler",
+            lang: {
+                english: "Anglais",
+                french: "Français",
+                spanish: "Espagnol",
+                german: "Allemand"
+            },
             oneCertificate: "1 Certificat",
             tenCertificates: "10 Certificats",
             hundredCertificates: "100 Certificats",
@@ -54,15 +66,84 @@ document.addEventListener('DOMContentLoaded', function() {
             endDate: "Date de fin",            
             actions: "Actions",
             downloads: "Téléchargements"
+        },
+        es: {
+            certificateNamePlaceholder: "Nombre del certificado (ej: John Doe)",
+            searchPlaceholder: "Buscar un certificado",
+            revoke: "Revocar",
+            renew: "Renovar",
+            lang: {
+                english: "Inglés",
+                french: "Francés",
+                spanish: "Español",
+                german: "Alemán"
+            },
+            oneCertificate: "1 Certificado",
+            tenCertificates: "10 Certificados",
+            hundredCertificates: "100 Certificados",
+            thousandCertificates: "1000 Certificados",
+            refresh: "Actualizar",
+            done: "¡Hecho!",
+            validityBtn: {
+                valid: "Válido",
+                expired: "Expirado",
+                revoked: "Revocado",
+                unknown: "Desconocido"
+            },
+            serial: "Número de serie",
+            startDate: "Fecha de inicio",
+            endDate: "Fecha de finalización",
+            actions: "Acciones",
+            downloads: "Descargas"
+        },
+        de: {
+            certificateNamePlaceholder: "Zertifikatsname (z.B.: John Doe)",
+            searchPlaceholder: "Zertifikat suchen",
+            revoke: "Widerrufen",
+            renew: "Erneuern",
+            lang: {
+                english: "Englisch",
+                french: "Französisch",
+                spanish: "Spanisch",
+                german: "Deutsch"
+            },
+            oneCertificate: "1 Zertifikat",
+            tenCertificates: "10 Zertifikate",
+            hundredCertificates: "100 Zertifikate",
+            thousandCertificates: "1000 Zertifikate",
+            refresh: "Aktualisieren",
+            done: "Fertig!",
+            validityBtn: {
+                valid: "Gültig",
+                expired: "Abgelaufen",
+                revoked: "Widerrufen",
+                unknown: "Unbekannt"
+            },
+            serial: "Seriennummer",
+            startDate: "Startdatum",
+            endDate: "Enddatum",
+            actions: "Aktionen",
+            downloads: "Downloads"
         }
-    };
+    };    
 
     // Set default language from localStorage or use English as default
     let lang = localStorage.getItem('language') || 'en';
     updateLanguage(lang);
 
+    // Set the active class on the corresponding language menu item
+    $('#languageMenu .dropdown-item').removeClass('active');
+    $(`#languageMenu .dropdown-item[data-lang="${lang}"]`).addClass('active').find('.checkmark').show();
+
+    // Hide checkmarks for other languages
+    $('#languageMenu .dropdown-item').not(`[data-lang="${lang}"]`).find('.checkmark').hide(); 
+
     // Language switcher
     $('#languageMenu .dropdown-item').click(function () {
+        $('#languageMenu .dropdown-item').removeClass('active');
+        $('#languageMenu .dropdown-item').find('.checkmark').hide();
+        $(this).addClass('active');
+        $(this).find('.checkmark').show();
         lang = $(this).data('lang');
         localStorage.setItem('language', lang);
         updateLanguage(lang);
@@ -71,27 +152,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update the language
     function updateLanguage(lang) {
-        setTimeout(() => {
-            // Update top page content
-            $('#certName').attr('placeholder', texts[lang].certificateNamePlaceholder);
-            $('#certSearch').attr('placeholder', texts[lang].searchPlaceholder);
-            $('#revokeSelected').html(`<img src="src/images/ban-solid.svg" class="icon mr-1"/> ${texts[lang].revoke}`);
-            $('#renewSelected').html(`<img src="src/images/rotate-right-solid.svg" class="icon mr-1"/> ${texts[lang].renew}`);
-            $('#refresh').html(`<img src="src/images/rotate-solid.svg" class="icon mr-1"/> ${texts[lang].refresh}`);
+        // Update top page content
+        $('#certName').attr('placeholder', texts[lang].certificateNamePlaceholder);
+        $('#certSearch').attr('placeholder', texts[lang].searchPlaceholder);
+        $('#revokeSelected').html(`<img src="src/images/ban-solid.svg" class="icon mr-1"/> ${texts[lang].revoke}`);
+        $('#renewSelected').html(`<img src="src/images/rotate-right-solid.svg" class="icon mr-1"/> ${texts[lang].renew}`);
+        $('#refresh').html(`<img src="src/images/rotate-solid.svg" class="icon mr-1"/> ${texts[lang].refresh}`);
+        $('#english').html(`${texts[lang].lang.english} <span class="checkmark"><img src="src/images/check-solid.svg" class="icon ml-3"/></span>`);
+        $('#french').html(`${texts[lang].lang.french} <span class="checkmark"><img src="src/images/check-solid.svg" class="icon ml-3"/></span>`);
+        $('#spanish').html(`${texts[lang].lang.spanish} <span class="checkmark"><img src="src/images/check-solid.svg" class="icon ml-3"/></span>`);
+        $('#german').html(`${texts[lang].lang.german} <span class="checkmark"><img src="src/images/check-solid.svg" class="icon ml-3"/></span>`);
 
-            // Update dropdown items
-            $('.create[data-count="1"]').text(texts[lang].oneCertificate);
-            $('.create[data-count="10"]').text(texts[lang].tenCertificates);
-            $('.create[data-count="100"]').text(texts[lang].hundredCertificates);
-            $('.create[data-count="1000"]').text(texts[lang].thousandCertificates);
-            
-            // Update table headers
-            $('th[data-sort="serial"]').html(`<img src="src/images/hashtag-solid.svg" class="icon mr-1"/> ${texts[lang].serial}`);
-            $('th[data-sort="startDate"]').html(`<img src="src/images/calendar-day-solid.svg" class="icon mr-1"/> ${texts[lang].startDate}`);
-            $('th[data-sort="endDate"]').html(`<img src="src/images/calendar-days-solid.svg" class="icon mr-1"/> ${texts[lang].endDate}`);
-            $('th[data-sort="actions"]').html(`<img src="src/images/gear-solid.svg" class="icon mr-1"/> ${texts[lang].actions}`);
-            $('th[data-sort="downloads"]').html(`<img src="src/images/download-solid.svg" class="icon mr-1"/> ${texts[lang].downloads}`);
-        }, 50);
+        // Update dropdown items
+        $('.create[data-count="1"]').text(texts[lang].oneCertificate);
+        $('.create[data-count="10"]').text(texts[lang].tenCertificates);
+        $('.create[data-count="100"]').text(texts[lang].hundredCertificates);
+        $('.create[data-count="1000"]').text(texts[lang].thousandCertificates);
+        
+        // Update table headers
+        $('th[data-sort="serial"]').html(`<img src="src/images/hashtag-solid.svg" class="icon mr-1"/> ${texts[lang].serial}`);
+        $('th[data-sort="startDate"]').html(`<img src="src/images/calendar-day-solid.svg" class="icon mr-1"/> ${texts[lang].startDate}`);
+        $('th[data-sort="endDate"]').html(`<img src="src/images/calendar-days-solid.svg" class="icon mr-1"/> ${texts[lang].endDate}`);
+        $('th[data-sort="actions"]').html(`<img src="src/images/gear-solid.svg" class="icon mr-1"/> ${texts[lang].actions}`);
+        $('th[data-sort="downloads"]').html(`<img src="src/images/download-solid.svg" class="icon mr-1"/> ${texts[lang].downloads}`);
     }
 
     // Adapt name, normalize
@@ -99,8 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return name
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/[^a-zA-Z0-9-_]/g, '');
+            .replace(/[^a-zA-Z0-9-_ ]/g, '');
     }
 
     // Format date to YYYY/MM/DD from ISO format
@@ -129,18 +211,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const cellA = a.querySelector(`td:nth-child(${columnIndex})`);
             const cellB = b.querySelector(`td:nth-child(${columnIndex})`);
 
-            // Get button classes for validity
-            const buttonClassA = cellA.querySelector('button').classList;
-            const buttonClassB = cellB.querySelector('button').classList;
-
-            const statusOrder = {
-                'btn-success': 1, // Valid
-                'btn-danger': 2,  // Revoked
-                'btn-warning': 3, // Expired
-                'btn-secondary': 4 // Unknown
-            };
-
             if (columnIndex === 2) {
+                // Get button classes for validity
+                const buttonClassA = cellA.querySelector('button').classList;
+                const buttonClassB = cellB.querySelector('button').classList;
+    
+                const statusOrder = {
+                    'btn-success': 1, // Valid
+                    'btn-danger': 2,  // Revoked
+                    'btn-warning': 3, // Expired
+                    'btn-secondary': 4 // Unknown
+                };
+
                 const orderA = Array.from(buttonClassA).find(cls => statusOrder[cls]);
                 const orderB = Array.from(buttonClassB).find(cls => statusOrder[cls]);
                 return order === 'asc'
