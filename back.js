@@ -40,16 +40,15 @@ const findUniqueCertName = (baseName) => {
 };
 
 // Function to validate certificate name
-const validateCertName = (name) => {
-    const regex = /^[a-zA-Z0-9-_]+$/;
-    const lowerCaseName = name.toLowerCase();
+const validateName = (name) => {
+    const regex = /^[a-zA-Z0-9-_ ]+$/;
 
     for (const command of ['sudo', 'bash', 'sh', 'exec', 'system', 'kill', 'rm', 'mv', 'cp', 'dd', 'curl', 'wget', 'chmod', 'chown', 'ln']) {
-        if (lowerCaseName.includes(command)) {
+        if (name.toLowerCase().includes(command)) {
             return false;
         }
     }
-    return regex.test(name) && name.length > 0 && name.length <= 30;
+    return regex.test(name) && name.length > 0 && name.length < 64;
 };
 
 // Function to validate count parameter
@@ -75,16 +74,16 @@ app.get('/list', (req, res, next) => {
 // Route to create certificates
 app.get('/create', async (req, res, next) => {
     const certName = req.query.name;
-    const count = parseInt(req.query.count) || 1;
+    const count = parseInt(req.query.count);
 
     // Validate certificate name
-    if (!validateCertName(certName)) {
-        return res.status(400).json({ error: `Invalid certificate name (${certName}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` });
+    if (!validateName(certName)) {
+        return res.status(400).json({ error: `Invalid certificate name (${certName}). Only alphanumeric characters, spaces, hyphens, and underscores are allowed, and the length must be between 1 and 64 characters.` });
     }
 
     // Validate count
     if (!validateCount(count)) {
-        return res.status(400).json({ error: `Invalid count value (${count}). It must be a positive integer and less than or equal to 100.` });
+        return res.status(400).json({ error: `Invalid count value. It must be a positive integer.` });
     }
 
     const createCert = (uniqueCertName) => {
@@ -133,8 +132,8 @@ app.post('/revoke', (req, res, next) => {
     }
 
     for (const name of id) {
-        if (!validateCertName(name)) {
-            return res.status(400).json({ error: `Invalid certificate name (${name}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` });
+        if (!validateName(name)) {
+            return res.status(400).json({ error: `Invalid certificate name (${name}). Only alphanumeric characters, spaces, hyphens, and underscores are allowed, and the length must be between 1 and 64 characters.` });
         }
     }
 
@@ -189,8 +188,8 @@ app.post('/renew', (req, res, next) => {
     }
 
     for (const name of id) {
-        if (!validateCertName(name)) {
-            return res.status(400).json({ error: `Invalid certificate name (${name}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` });
+        if (!validateName(name)) {
+            return res.status(400).json({ error: `Invalid certificate name (${name}). Only alphanumeric characters, spaces, hyphens, and underscores are allowed, and the length must be between 1 and 64 characters.` });
         }
     }
 
