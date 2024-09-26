@@ -62,6 +62,7 @@
             width: 1em;
             height: 1em;
             margin-top: -0.15em;
+            pointer-events: none;
         }
 
         .btn {
@@ -291,8 +292,8 @@
 
                             const row = document.createElement('tr');
                             row.innerHTML = `
-                                <td><button class="btn btn-dark btn-sm cert-checkbox data-id="${cert.id}" ${status === 'R' ? 'disabled' : ''}><img src="src/images/${status === 'R' ? 'ban' : 'minus'}-solid.svg" class="icon"/></button></td>
-                                <td><button class="btn btn-${validityColor} btn-sm w-100 data-id="${cert.id}">${validityBtn}</button></td>
+                                <td><button class="btn btn-dark btn-sm cert-checkbox" data-id="${cert.id}" ${status === 'R' ? 'disabled' : ''}><img src="src/images/${status === 'R' ? 'ban' : 'minus'}-solid.svg" class="icon"/></button></td>
+                                <td><button class="btn btn-${validityColor} btn-sm w-100" data-id="${cert.id}">${validityBtn}</button></td>
                                 <td>
                                     <span class="tooltip-container" data-toggle="tooltip" data-html="true" data-placement="bottom" 
                                     title="<div>Signature: ${cert.signature}</div>">
@@ -439,32 +440,35 @@
             // JQuery
             $(document).ready(function() {
                 $("table thead").sortable({
-                        items: 'th',
-                        handle: '.sortable-handle',
-                        cursor: 'move',
-                        
-                        start: function(event, ui) {
-                            ui.placeholder.height(ui.helper.outerHeight());
-                        },
-                        stop: function(event, ui) {
-                            const newOrder = $("table thead th").map(function() {
-                                return $(this).index();
-                            }).get();
+                    items: 'th',
+                    handle: '.sortable-handle',
+                    cursor: 'move',
+                    
+                    start: function(event, ui) {
+                        ui.placeholder.height(ui.helper.outerHeight());
+                    },
+                    stop: function(event, ui) {
+                        const newOrder = $("table thead th").map(function() {
+                            return $(this).index();
+                        }).get();
 
-                            $("table thead").html(
-                                $("table thead th").sort(function(a, b) {
-                                    return newOrder[$(a).index()] - newOrder[$(b).index()];
-                                }).toArray()
-                            );
+                        const newHeaders = $("table thead th").sort(function(a, b) {
+                            return newOrder[$(a).index()] - newOrder[$(b).index()];
+                        });
+                        $("table thead").html(newHeaders);
 
-                            $("table tbody").each(function() {
-                                $(this).children("tr").each(function() {
-                                    const cells = $(this).children("td").toArray();
-                                    const reorderedCells = newOrder.map(index => cells[index]);
-                                    $(this).empty().append(reorderedCells);
-                                });
-                            });
-                        }
+                        $("table tbody tr").each(function() {
+                            const cells = $(this).children("td").toArray();
+                            const reorderedCells = newOrder.map(index => cells[index]);
+                            $(this).empty().append(reorderedCells);
+                        });
+
+                        $("table tbody tr").each(function() {
+                            const $row = $(this);
+                            const newCells = $row.children("td").toArray();
+                            $(this).empty().append(newCells);
+                        });
+                    }
                 }).disableSelection();
             });
 
