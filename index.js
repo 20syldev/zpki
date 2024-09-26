@@ -1,4 +1,5 @@
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
+
 const fs = require('fs');
 const path = require('path');
 
@@ -58,13 +59,26 @@ app.get('/create', async (req, res) => {
 
     // Validate certificate name
     if (!validateCertName(certName)) {
-        return res.status(400).send('Invalid certificate name. Only alphanumeric characters, hyphens, and underscores are allowed.');
+        return res.status(400).json({ error: 'Invalid certificate name. Only alphanumeric characters, hyphens, and underscores are allowed.' }, null, 2);
     }
 
     const createCert = (uniqueCertName) => {
         return new Promise((resolve, reject) => {
-            exec(`./zpki -y -c none create-crt "${uniqueCertName}"`, { cwd: srcDir }, (error, stdout, stderr) => {
-                if (error) {
+            const process = spawn('./zpki', ['-y', '-c', 'none', 'create-crt', uniqueCertName], { cwd: srcDir });
+
+            let stdout = '';
+            let stderr = '';
+
+            process.stdout.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            process.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            process.on('close', (code) => {
+                if (code !== 0) {
                     return reject(`Creation error: ${stderr}`);
                 }
                 resolve(stdout);
@@ -79,9 +93,9 @@ app.get('/create', async (req, res) => {
                 await createCert(uniqueCertName);
                 generatedCount++;
             }
-            res.send(`${generatedCount}/${count} certificates generated.`);
+            res.json({ response: `${generatedCount}/${count} certificates generated.` }, null, 2); // Pretty print here
         } catch (error) {
-            res.status(500).send(error);
+            res.status(500).json({ error: error.message }, null, 2);
         }
     };
     processCerts();
@@ -91,19 +105,32 @@ app.get('/create', async (req, res) => {
 app.post('/revoke', (req, res) => {
     const { id } = req.body;
     if (!Array.isArray(id)) {
-        return res.status(400).send('Invalid list of certificates.');
+        return res.status(400).json({ error: 'Invalid list of certificates.' }, null, 2);
     }
 
     for (const name of id) {
         if (!validateCertName(name)) {
-            return res.status(400).send(`Invalid certificate name: ${name}. Only alphanumeric characters, hyphens, and underscores are allowed.`);
+            return res.status(400).json({ error: `Invalid certificate name: ${name}. Only alphanumeric characters, hyphens, and underscores are allowed.` }, null, 2);
         }
     }
 
     const revokeCert = (name) => {
         return new Promise((resolve, reject) => {
-            exec(`./zpki -y -c none ca-revoke-crt "${name}"`, { cwd: srcDir }, (error, stdout, stderr) => {
-                if (error) {
+            const process = spawn('./zpki', ['-y', '-c', 'none', 'ca-revoke-crt', name], { cwd: srcDir });
+
+            let stdout = '';
+            let stderr = '';
+
+            process.stdout.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            process.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            process.on('close', (code) => {
+                if (code !== 0) {
                     return reject(`Revocation error: ${stderr}`);
                 }
                 resolve(stdout);
@@ -118,13 +145,13 @@ app.post('/revoke', (req, res) => {
         try {
             for (const name of id) {
                 if (!certMap.has(name)) {
-                    return res.status(404).send(`Certificate with ID ${name} not found.`);
+                    return res.status(404).json({ error: `Certificate with ID ${name} not found.` }, null, 2);
                 }
                 await revokeCert(name);
             }
-            res.send('Certificates revoked.');
+            res.json({ response: 'Certificates revoked.' }, null, 2);
         } catch (error) {
-            res.status(500).send(error);
+            res.status(500).json({ error: error.message }, null, 2);
         }
     };
     processRevocations();
@@ -134,19 +161,32 @@ app.post('/revoke', (req, res) => {
 app.post('/renew', (req, res) => {
     const { id } = req.body;
     if (!Array.isArray(id)) {
-        return res.status(400).send('Invalid list of certificates.');
+        return res.status(400).json({ error: 'Invalid list of certificates.' }, null, 2);
     }
 
     for (const name of id) {
         if (!validateCertName(name)) {
-            return res.status(400).send(`Invalid certificate name: ${name}. Only alphanumeric characters, hyphens, and underscores are allowed.`);
+            return res.status(400).json({ error: `Invalid certificate name: ${name}. Only alphanumeric characters, hyphens, and underscores are allowed.` }, null, 2);
         }
     }
 
     const renewCert = (name) => {
         return new Promise((resolve, reject) => {
-            exec(`./zpki -y -c none ca-update-crt "${name}"`, { cwd: srcDir }, (error, stdout, stderr) => {
-                if (error) {
+            const process = spawn('./zpki', ['-y', '-c', 'none', 'ca-update-crt', name], { cwd: srcDir });
+
+            let stdout = '';
+            let stderr = '';
+
+            process.stdout.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            process.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            process.on('close', (code) => {
+                if (code !== 0) {
                     return reject(`Renewal error: ${stderr}`);
                 }
                 resolve(stdout);
@@ -161,13 +201,13 @@ app.post('/renew', (req, res) => {
         try {
             for (const name of id) {
                 if (!certMap.has(name)) {
-                    return res.status(404).send(`Certificate with ID ${name} not found.`);
+                    return res.status(404).json({ error: `Certificate with ID ${name} not found.` }, null, 2);
                 }
                 await renewCert(name);
             }
-            res.send('Certificates renewed.');
+            res.json({ response: 'Certificates renewed.' }, null, 2);
         } catch (error) {
-            res.status(500).send(error);
+            res.status(500).json({ error: error.message }, null, 2);
         }
     };
     processRenewals();
