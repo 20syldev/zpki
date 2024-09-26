@@ -121,21 +121,50 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Sort columns
+    // Sorting columns
     function sortTable(columnIndex, order) {
-        const rows = Array.from(certTableBody.querySelectorAll('tr'));                
+        const rows = Array.from(certTableBody.querySelectorAll('tr'));
+
         rows.sort((a, b) => {
             const cellA = a.querySelector(`td:nth-child(${columnIndex})`);
             const cellB = b.querySelector(`td:nth-child(${columnIndex})`);
 
-            const textA = cellA.textContent.trim();
-            const textB = cellB.textContent.trim();
-            if (order === 'asc') {
-                return textA.localeCompare(textB, undefined, { numeric: true });
-            } else {
-                return textB.localeCompare(textA, undefined, { numeric: true });
+            // Get button classes for validity
+            const buttonClassA = cellA.querySelector('button').classList;
+            const buttonClassB = cellB.querySelector('button').classList;
+
+            const statusOrder = {
+                'btn-success': 1, // Valid
+                'btn-danger': 2,  // Revoked
+                'btn-warning': 3, // Expired
+                'btn-secondary': 4 // Unknown
+            };
+
+            if (columnIndex === 2) {
+                const orderA = Array.from(buttonClassA).find(cls => statusOrder[cls]);
+                const orderB = Array.from(buttonClassB).find(cls => statusOrder[cls]);
+                return order === 'asc'
+                    ? statusOrder[orderA] - statusOrder[orderB]
+                    : statusOrder[orderB] - statusOrder[orderA];
             }
+
+            if (columnIndex === 3) {
+                return order === 'asc'
+                    ? cellA.textContent.trim().localeCompare(cellB.textContent.trim())
+                    : cellB.textContent.trim().localeCompare(cellA.textContent.trim());
+            }
+
+            if (columnIndex === 4 || columnIndex === 5) {
+                const dateA = new Date(cellA.textContent.trim());
+                const dateB = new Date(cellB.textContent.trim());
+                return order === 'asc' ? dateA - dateB : dateB - dateA;
+            }
+
+            return order === 'asc'
+                ? cellA.textContent.trim().localeCompare(cellB.textContent.trim())
+                : cellB.textContent.trim().localeCompare(cellA.textContent.trim());
         });
+
         rows.forEach(row => certTableBody.appendChild(row));
     }
 
