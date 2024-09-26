@@ -57,11 +57,6 @@
             cursor: pointer;
             transition: 0.3s;
         }
-        /* 
-        .cert-checkbox.active {
-            opacity: 0.5;
-        } 
-        */
 
         .icon {
             width: 1em;
@@ -71,7 +66,6 @@
 
         .btn {
             opacity: 0.9;
-            margin-top: 3px;
             font-weight: 500;
         }
         .btn[disabled] {
@@ -115,6 +109,10 @@
             text-align: center;
         }
 
+        .table td {
+            vertical-align: middle;
+        }
+
         th, td {
             position: relative;
             overflow: hidden;
@@ -133,8 +131,7 @@
 
         ::-webkit-scrollbar {
             display: none;
-        }
-        
+        }        
     </style>
 </head>
 <body>
@@ -294,8 +291,8 @@
 
                             const row = document.createElement('tr');
                             row.innerHTML = `
-                                <td><button class="btn btn-dark btn-sm cert-checkbox"${status === 'R' ? 'disabled' : ''}><img src="src/images/${status === 'R' ? 'ban' : 'minus'}-solid.svg" class="icon"/></button></td>
-                                <td><button class="btn btn-${validityColor} btn-sm w-100" data-id="${cert.id}">${validityBtn}</button></td>
+                                <td><button class="btn btn-dark btn-sm cert-checkbox data-id="${cert.id}" ${status === 'R' ? 'disabled' : ''}><img src="src/images/${status === 'R' ? 'ban' : 'minus'}-solid.svg" class="icon"/></button></td>
+                                <td><button class="btn btn-${validityColor} btn-sm w-100 data-id="${cert.id}">${validityBtn}</button></td>
                                 <td>
                                     <span class="tooltip-container" data-toggle="tooltip" data-html="true" data-placement="bottom" 
                                     title="<div>Signature: ${cert.signature}</div>">
@@ -310,8 +307,8 @@
                                 </td>
                                 <td>${cert.id}</td>
                                 <td>
-                                    <button class="btn btn-dark btn-sm" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/ban-solid.svg" class="icon mr-1"/> Revoke</button>
-                                    <button class="btn btn-dark btn-sm" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/rotate-right-solid.svg" class="icon mr-1"/> Renew</button>
+                                    <button class="btn btn-dark btn-sm revoke" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/ban-solid.svg" class="icon mr-1"/> Revoke</button>
+                                    <button class="btn btn-dark btn-sm renew" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/rotate-right-solid.svg" class="icon mr-1"/> Renew</button>
                                 </td>
                                 <td>
                                     <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.crt</a>
@@ -394,13 +391,13 @@
                 setTimeout(() => {
                     refreshButton.classList.add('btn-success');
                     refreshButton.innerHTML = '<img src="src/images/square-check-white-solid.svg" class="icon mr-1"/> Done!';
-                }, 1200);
+                }, 1000);
                 
                 setTimeout(() => {
                     refreshButton.classList.remove('btn-success');
                     refreshButton.innerHTML = '<img src="src/images/rotate-solid.svg" class="icon mr-1"/> Refresh';
                     refreshButton.disabled = false;
-                }, 3000);
+                }, 2500);
             });
 
             // Renew multiple certificates
