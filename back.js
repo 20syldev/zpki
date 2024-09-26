@@ -26,7 +26,6 @@ app.use(cors({ methods: ['GET', 'POST'] }));
 app.use('/src', express.static(srcDir));
 app.use(express.static(__dirname));
 app.use(express.json());
-app.use(handleError);
 app.use(helmet());
 
 // Function to find a unique certificate name
@@ -43,7 +42,19 @@ const findUniqueCertName = (baseName) => {
 // Function to validate certificate name
 const validateCertName = (name) => {
     const regex = /^[a-zA-Z0-9-_]+$/;
+    const lowerCaseName = name.toLowerCase();
+
+    for (const command of ['sudo', 'bash', 'sh', 'exec', 'system', 'kill', 'rm', 'mv', 'cp', 'dd', 'curl', 'wget', 'chmod', 'chown', 'ln']) {
+        if (lowerCaseName.includes(command)) {
+            return false;
+        }
+    }
     return regex.test(name) && name.length > 0 && name.length <= 30;
+};
+
+// Function to validate count parameter
+const validateCount = (count) => {
+    return Number.isInteger(count) && count > 0;
 };
 
 // Route to serve index.html
@@ -52,23 +63,28 @@ app.get('/', (req, res) => {
 });
 
 // Route to get the list of certificates
-app.get('/list', (req, res) => {
+app.get('/list', (req, res, next) => {
     try {
         const certData = readCertData();
         res.json(certData);
     } catch (error) {
-        res.status(500).send(error.message);
+        next(error);
     }
 });
 
 // Route to create certificates
-app.get('/create', async (req, res) => {
+app.get('/create', async (req, res, next) => {
     const certName = req.query.name;
     const count = parseInt(req.query.count) || 1;
 
     // Validate certificate name
     if (!validateCertName(certName)) {
-        return res.status(400).json({ error: `Invalid certificate name (${certName}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` }, null, 2);
+        return res.status(400).json({ error: `Invalid certificate name (${certName}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` });
+    }
+
+    // Validate count
+    if (!validateCount(count)) {
+        return res.status(400).json({ error: `Invalid count value (${count}). It must be a positive integer and less than or equal to 100.` });
     }
 
     const createCert = (uniqueCertName) => {
@@ -88,7 +104,7 @@ app.get('/create', async (req, res) => {
 
             process.on('close', (code) => {
                 if (code !== 0) {
-                    return reject(`Creation error: ${stderr}`);
+                    return reject(new Error(`Creation error: ${stderr}`));
                 }
                 resolve(stdout);
             });
@@ -101,24 +117,24 @@ app.get('/create', async (req, res) => {
                 const uniqueCertName = findUniqueCertName(certName);
                 await createCert(uniqueCertName);
             }
-            res.json({ response: `${count} certificates generated.` }, null, 2);
+            res.json({ response: `${count} certificates generated.` });
         } catch (error) {
-            res.status(500).json({ error: error.message }, null, 2);
+            next(error);
         }
     };
     processCerts();
 });
 
 // Route to revoke certificates
-app.post('/revoke', (req, res) => {
+app.post('/revoke', (req, res, next) => {
     const { id } = req.body;
     if (!Array.isArray(id)) {
-        return res.status(400).json({ error: 'Invalid list of certificates.' }, null, 2);
+        return res.status(400).json({ error: 'Invalid list of certificates.' });
     }
 
     for (const name of id) {
         if (!validateCertName(name)) {
-            return res.status(400).json({ error: `Invalid certificate name (${name}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` }, null, 2);
+            return res.status(400).json({ error: `Invalid certificate name (${name}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` });
         }
     }
 
@@ -139,7 +155,7 @@ app.post('/revoke', (req, res) => {
 
             process.on('close', (code) => {
                 if (code !== 0) {
-                    return reject(`Revocation error: ${stderr}`);
+                    return reject(new Error(`Revocation error: ${stderr}`));
                 }
                 resolve(stdout);
             });
@@ -153,28 +169,28 @@ app.post('/revoke', (req, res) => {
         try {
             for (const name of id) {
                 if (!certMap.has(name)) {
-                    return res.status(404).json({ error: `Certificate with ID ${name} not found.` }, null, 2);
+                    return res.status(404).json({ error: `Certificate with ID ${name} not found.` });
                 }
                 await revokeCert(name);
             }
-            res.json({ response: 'Certificates revoked.' }, null, 2);
+            res.json({ response: 'Certificates revoked.' });
         } catch (error) {
-            res.status(500).json({ error: error.message }, null, 2);
+            next(error);
         }
     };
     processRevocations();
 });
 
 // Route to renew certificates
-app.post('/renew', (req, res) => {
+app.post('/renew', (req, res, next) => {
     const { id } = req.body;
     if (!Array.isArray(id)) {
-        return res.status(400).json({ error: 'Invalid list of certificates.' }, null, 2);
+        return res.status(400).json({ error: 'Invalid list of certificates.' });
     }
 
     for (const name of id) {
         if (!validateCertName(name)) {
-            return res.status(400).json({ error: `Invalid certificate name (${name}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` }, null, 2);
+            return res.status(400).json({ error: `Invalid certificate name (${name}). Only alphanumeric characters, hyphens, and underscores are allowed, and the length must be between 1 and 30 characters.` });
         }
     }
 
@@ -195,7 +211,7 @@ app.post('/renew', (req, res) => {
 
             process.on('close', (code) => {
                 if (code !== 0) {
-                    return reject(`Renewal error: ${stderr}`);
+                    return reject(new Error(`Renewal error: ${stderr}`));
                 }
                 resolve(stdout);
             });
@@ -209,13 +225,13 @@ app.post('/renew', (req, res) => {
         try {
             for (const name of id) {
                 if (!certMap.has(name)) {
-                    return res.status(404).json({ error: `Certificate with ID ${name} not found.` }, null, 2);
+                    return res.status(404).json({ error: `Certificate with ID ${name} not found.` });
                 }
                 await renewCert(name);
             }
-            res.json({ response: 'Certificates renewed.' }, null, 2);
+            res.json({ response: 'Certificates renewed.' });
         } catch (error) {
-            res.status(500).json({ error: error.message }, null, 2);
+            next(error);
         }
     };
     processRenewals();
@@ -290,7 +306,7 @@ const readCertData = () => {
     return certificateData;
 };
 
-// Localhost
+app.use(handleError);
 app.listen(port, () => {
     console.log(`Server started: http://localhost:${port}`);
 });
