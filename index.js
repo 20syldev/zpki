@@ -26,16 +26,17 @@ document.addEventListener('DOMContentLoaded', function() {
             thousandCertificates: "1000 Certificates",
             refresh: "Refresh",
             done: "Done!",
-            validityBtn: {
+            statusBtn: {
                 valid: "Valid",
                 expired: "Expired",
                 revoked: "Revoked",
                 unknown: "Unknown"
             },
+            status: "Status",
             serial: "Serial",
             startDate: "Start Date",
             endDate: "End Date",            
-            actions: "Actions",
+            common_name: "Common Name (CN)",
             downloads: "Downloads"
         },
         fr: {
@@ -55,16 +56,17 @@ document.addEventListener('DOMContentLoaded', function() {
             thousandCertificates: "1000 Certificats",
             refresh: "Rafraîchir",
             done: "Terminé !",
-            validityBtn: {
+            statusBtn: {
                 valid: "Valide",
                 expired: "Expiré",
                 revoked: "Révoqué",
                 unknown: "Inconnu"
             },
+            status: "Statut",
             serial: "Numéro de série",
             startDate: "Date de début",
             endDate: "Date de fin",            
-            actions: "Actions",
+            common_name: "Actions",
             downloads: "Téléchargements"
         },
         es: {
@@ -84,21 +86,22 @@ document.addEventListener('DOMContentLoaded', function() {
             thousandCertificates: "1000 Certificados",
             refresh: "Actualizar",
             done: "¡Hecho!",
-            validityBtn: {
+            statusBtn: {
                 valid: "Válido",
                 expired: "Expirado",
                 revoked: "Revocado",
                 unknown: "Desconocido"
             },
+            status: "Estado",
             serial: "Número de serie",
             startDate: "Fecha de inicio",
             endDate: "Fecha de finalización",
-            actions: "Acciones",
+            common_name: "Nombre común (CN)",
             downloads: "Descargas"
         },
         de: {
             certificateNamePlaceholder: "Zertifikatsname (z.B.: John Doe)",
-            searchPlaceholder: "Zertifikat suchen",
+            searchPlaceholder: "Nach einem Zertifikat suchen",
             revoke: "Widerrufen",
             renew: "Erneuern",
             lang: {
@@ -113,18 +116,19 @@ document.addEventListener('DOMContentLoaded', function() {
             thousandCertificates: "1000 Zertifikate",
             refresh: "Aktualisieren",
             done: "Fertig!",
-            validityBtn: {
+            statusBtn: {
                 valid: "Gültig",
                 expired: "Abgelaufen",
                 revoked: "Widerrufen",
                 unknown: "Unbekannt"
             },
+            status: "Status",
             serial: "Seriennummer",
             startDate: "Startdatum",
             endDate: "Enddatum",
-            actions: "Aktionen",
+            common_name: "Allgemeiner Name (CN)",
             downloads: "Downloads"
-        }
+        },        
     };    
 
     // Set default language from localStorage or use English as default
@@ -206,45 +210,43 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sorting columns
     function sortTable(columnIndex, order) {
         const rows = Array.from(certTableBody.querySelectorAll('tr'));
+        const headers = document.querySelectorAll('th');
+        const sortKey = headers[columnIndex].getAttribute('data-sort');
 
         rows.sort((a, b) => {
-            const cellA = a.querySelector(`td:nth-child(${columnIndex})`);
-            const cellB = b.querySelector(`td:nth-child(${columnIndex})`);
+            const cellA = a.querySelector(`td[data-sort="${sortKey}"]`);
+            const cellB = b.querySelector(`td[data-sort="${sortKey}"]`);
 
-            if (columnIndex === 2) {
-                // Get button classes for validity
-                const buttonClassA = cellA.querySelector('button').classList;
-                const buttonClassB = cellB.querySelector('button').classList;
-    
+            if (sortKey === 'status') {
+                const buttonClassA = cellA.querySelector('button')?.classList;
+                const buttonClassB = cellB.querySelector('button')?.classList;
+
                 const statusOrder = {
-                    'btn-success': 1, // Valid
-                    'btn-danger': 2,  // Revoked
-                    'btn-warning': 3, // Expired
-                    'btn-secondary': 4 // Unknown
+                    'btn-success': 1,
+                    'btn-danger': 2,
+                    'btn-warning': 3,
+                    'btn-secondary': 4
                 };
 
-                const orderA = Array.from(buttonClassA).find(cls => statusOrder[cls]);
-                const orderB = Array.from(buttonClassB).find(cls => statusOrder[cls]);
+                const orderA = Array.from(buttonClassA || []).find(cls => statusOrder[cls]);
+                const orderB = Array.from(buttonClassB || []).find(cls => statusOrder[cls]);
                 return order === 'asc'
-                    ? statusOrder[orderA] - statusOrder[orderB]
-                    : statusOrder[orderB] - statusOrder[orderA];
+                    ? (statusOrder[orderA] || 0) - (statusOrder[orderB] || 0)
+                    : (statusOrder[orderB] || 0) - (statusOrder[orderA] || 0);
             }
 
-            if (columnIndex === 3) {
-                return order === 'asc'
-                    ? cellA.textContent.trim().localeCompare(cellB.textContent.trim())
-                    : cellB.textContent.trim().localeCompare(cellA.textContent.trim());
-            }
+            const valueA = cellA.textContent.trim();
+            const valueB = cellB.textContent.trim();
 
-            if (columnIndex === 4 || columnIndex === 5) {
-                const dateA = new Date(cellA.textContent.trim());
-                const dateB = new Date(cellB.textContent.trim());
+            if (sortKey === 'startDate' || sortKey === 'endDate') {
+                const dateA = new Date(valueA);
+                const dateB = new Date(valueB);
                 return order === 'asc' ? dateA - dateB : dateB - dateA;
             }
 
             return order === 'asc'
-                ? cellA.textContent.trim().localeCompare(cellB.textContent.trim())
-                : cellB.textContent.trim().localeCompare(cellA.textContent.trim());
+                ? valueA.localeCompare(valueB)
+                : valueB.localeCompare(valueA);
         });
 
         rows.forEach(row => certTableBody.appendChild(row));
@@ -258,40 +260,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 certTableBody.innerHTML = '';
                 data.forEach(cert => {
                     const status = cert.status;
-                    let validityColor, validityBtn, validityText;
+                    let statusColor, statusBtn, statusText;
 
-                    // Determine validity color and button text based on the status
+                    // Determine status color and button text based on the status
                     if (status === 'V') {
-                        validityColor = 'success';
-                        validityText = texts[lang].validityBtn.valid;
-                        validityBtn = `<img src="src/images/circle-check-solid.svg" class="icon mr-1"/> ${validityText}`;
-                    } else if (status === 'I') {
-                        validityColor = 'warning';
-                        validityText = texts[lang].validityBtn.expired;
-                        validityBtn = `<img src="src/images/triangle-exclamation-solid.svg" class="icon mr-1"/> ${validityText}`;
+                        statusColor = 'success';
+                        statusText = texts[lang].statusBtn.valid;
+                        statusBtn = `<img src="src/images/circle-check-solid.svg" class="icon mr-1"/> ${statusText}`;
+                    } else if (status === 'E') {
+                        statusColor = 'warning';
+                        statusText = texts[lang].statusBtn.expired;
+                        statusBtn = `<img src="src/images/triangle-exclamation-solid.svg" class="icon mr-1"/> ${statusText}`;
                     } else if (status === 'R') {
-                        validityColor = 'danger';
-                        validityText = texts[lang].validityBtn.revoked;
-                        validityBtn = `<img src="src/images/circle-xmark-solid.svg" class="icon mr-1"/> ${validityText}`;
+                        statusColor = 'danger';
+                        statusText = texts[lang].statusBtn.revoked;
+                        statusBtn = `<img src="src/images/circle-xmark-solid.svg" class="icon mr-1"/> ${statusText}`;
                     } else {
-                        validityColor = 'secondary';
-                        validityText = texts[lang].validityBtn.unknown;
-                        validityBtn = `<img src="src/images/question-solid.svg" class="icon mr-1"/> ${validityText}`;
+                        statusColor = 'secondary';
+                        statusText = texts[lang].statusBtn.unknown;
+                        statusBtn = `<img src="src/images/question-solid.svg" class="icon mr-1"/> ${statusText}`;
                     }
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td><button class="btn btn-dark btn-sm cert-checkbox" data-id="${cert.id}" ${status === 'R' ? 'disabled' : ''}><img src="src/images/${status === 'R' ? 'ban' : 'minus'}-solid.svg" class="icon"/></button></td>
-                        <td><button class="btn btn-${validityColor} btn-sm w-100" data-id="${cert.id}">${validityBtn}</button></td>
-                        <td><span class="tooltip-container" data-toggle="tooltip" data-html="true" data-placement="bottom" title="<div>Signature: ${cert.signature}</div>">${cert.serial}</span></td>
-                        <td><span class="tooltip-container" data-toggle="tooltip" data-placement="bottom" title="${cert.startDate}">${formatDate(cert.startDate)}</span></td>
-                        <td><span class="tooltip-container" data-toggle="tooltip" data-placement="bottom" title="${cert.endDate}">${formatDate(cert.endDate)}</span></td>
-                        <td>${cert.id}</td>
-                        <td>
-                            <button class="btn btn-dark btn-sm revoke" onclick="revokeCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/ban-solid.svg" class="icon mr-1"/> ${texts[lang].revoke}</button>
-                            <button class="btn btn-dark btn-sm renew" onclick="renewCert('${cert.id}')" ${status === 'R' ? 'disabled' : ''}><img src="src/images/rotate-right-solid.svg" class="icon mr-1"/> ${texts[lang].renew}</button>
-                        </td>
-                        <td>
+                        <td><input type="checkbox" class="cert-checkbox" data-id="${cert.id}" ${status === 'R' ? 'disabled' : ''}></td>                        
+                        <td data-sort="status"><button class="btn btn-ssm btn-${statusColor} rounded-pill w-75" data-id="${cert.id}">${statusBtn}</button></td>
+                        <td data-sort="serial"><span class="tooltip-container" data-toggle="tooltip" data-html="true" data-placement="bottom" title="<div>Signature: ${cert.signature}</div>">${cert.serial}</span></td>
+                        <td data-sort="startDate"><span class="tooltip-container" data-toggle="tooltip" data-placement="bottom" title="${cert.startDate}">${formatDate(cert.startDate)}</span></td>
+                        <td data-sort="endDate"><span class="tooltip-container" data-toggle="tooltip" data-placement="bottom" title="${cert.endDate}">${formatDate(cert.endDate)}</span></td>
+                        <td data-sort="id">${cert.id}</td>
+                        <td data-sort="downloads">
                             <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.crt" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.crt</a>
                             <a class="btn btn-info btn-sm" href="/src/certs/${cert.id}.csr" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.csr</a>
                             <a class="btn btn-info btn-sm" href="/src/private/${cert.id}.key" download><img src="src/images/file-arrow-down-solid.svg" class="icon mr-1"/>.key</a>
@@ -300,18 +298,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     certTableBody.appendChild(row);
                 });
 
-                // Add event listeners for cert checkboxes
-                const certButtons = document.querySelectorAll('.cert-checkbox');
-                certButtons.forEach(button => {
-                    button.addEventListener('click', function() {
-                        this.classList.toggle('active');
-                        updateActionButtons();
+                // Shift + click
+                let lastChecked = null;
+                const checkboxes = document.querySelectorAll('.cert-checkbox');
 
-                        if (this.classList.contains('active')) {
-                            this.innerHTML = '<img src="src/images/check-solid.svg" class="icon"/>';
-                        } else {
-                            this.innerHTML = '<img src="src/images/minus-solid.svg" class="icon"/>';
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('click', function(e) {
+                        if (!lastChecked) {
+                            lastChecked = this;
+                            return;
                         }
+
+                        if (e.shiftKey) {
+                            let inBetween = false;
+                            checkboxes.forEach(cb => {
+                                if (cb === this || cb === lastChecked) {
+                                    inBetween = !inBetween;
+                                }
+
+                                if (inBetween && !cb.disabled) {
+                                    cb.checked = this.checked;
+                                }
+                            });
+                        }
+                        lastChecked = this;
+                        updateActionButtons();
+                    });
+                });
+
+                // Add event listeners for cert checkboxes
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('click', function() {
+                        updateActionButtons();
                     });
                 });
                 updateActionButtons();
@@ -348,6 +366,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             createDropdown.setAttribute('disabled', 'true');
 
+            setInterval(() => loadCertData(), 2000)
+
             // Request create a certificate
             fetch(`/create?name=${encodeURIComponent(certName)}&count=${certCount}`)
                 .then(response => response.text())
@@ -357,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .finally(() => {
                     setTimeout(() => {
                         createDropdown.removeAttribute('disabled');
-                    }, 3000);
+                    }, 2000);
                 });
         });
     });
@@ -434,43 +454,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // JQuery
-    $(document).ready(function() {
-        $("table thead").sortable({
-            items: 'th',
-            handle: '.sortable-handle',
-            cursor: 'move',
-            
-            start: function(event, ui) {
-                ui.placeholder.height(ui.helper.outerHeight());
-            },
-            stop: function(event, ui) {
-                const newOrder = $("table thead th").map(function() {
-                    return $(this).index();
-                }).get();
-
-                $("table thead").html(
-                    $("table thead th").sort(function(a, b) {
-                        return newOrder[$(a).index()] - newOrder[$(b).index()];
-                    }).toArray()
-                );
-
-                $("table tbody").each(function() {
-                    $(this).children("tr").each(function() {
-                        const cells = $(this).children("td").toArray();
-                        const reorderedCells = newOrder.map(index => cells[index]);
-                        $(this).empty().append(reorderedCells);
-                    });
-                });
-            }
-        }).disableSelection();
-    });
-
     // Sorting columns
     document.querySelectorAll('thead th').forEach((header, index) => {
         header.addEventListener('click', function() {
             const currentOrder = this.classList.contains('asc') ? 'desc' : 'asc';
-            sortTable(index + 1, currentOrder);
+            sortTable(index, currentOrder);
             document.querySelectorAll('thead th').forEach(th => th.classList.remove('asc', 'desc'));
             this.classList.add(currentOrder);
         });
