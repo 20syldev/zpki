@@ -70,17 +70,44 @@
         </form>
 
         <!-- Table header -->
-        <table class="table table-bordered table-striped">
+        <table class="table table-sm">
             <thead class="thead">
                 <tr>
-                    <th class="resizable" scope="col" data-sort="selectBox"><div class="sortable-handle"><img src="src/images/square-check-solid.svg" class="icon"/></div></th>
-                    <th class="resizable" scope="col" data-sort="validity"><div class="sortable-handle"><img src="src/images/chart-simple-solid.svg" class="icon"/></div></th>
-                    <th class="resizable" scope="col" data-sort="serial"><div class="sortable-handle"><img src="src/images/hashtag-solid.svg" class="icon mr-1"/> Serial</div></th>
-                    <th class="resizable" scope="col" data-sort="startDate"><div class="sortable-handle"><img src="src/images/calendar-day-solid.svg" class="icon mr-1"/> Start Date</div></th>
-                    <th class="resizable" scope="col" data-sort="endDate"><div class="sortable-handle"><img src="src/images/calendar-days-solid.svg" class="icon mr-1"/> End Date</div></th>
-                    <th class="resizable" scope="col" data-sort="id"><div class="sortable-handle"><img src="src/images/file-lines-solid.svg" class="icon mr-1"/> ID</div></th>
-                    <th class="resizable" scope="col" data-sort="actions"><div class="sortable-handle"><img src="src/images/gear-solid.svg" class="icon mr-2"/>Actions</div></th>
-                    <th class="resizable" scope="col" data-sort="downloads"><div class="sortable-handle"><img src="src/images/download-solid.svg" class="icon mr-1"/> Downloads</div></th>
+                    <th class="resizable" scope="col" data-sort="selectBox" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)">
+                        <div class="sortable-handle">
+                            <img src="src/images/square-check-solid.svg" class="icon"/>
+                        </div>
+                    </th>
+                    <th class="resizable" scope="col" data-sort="status" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)">
+                        <div class="sortable-handle">
+                            <img src="src/images/chart-simple-solid.svg" class="icon mr-1"/> Status
+                        </div>
+                    </th>
+                    <th class="resizable" scope="col" data-sort="serial" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)">
+                        <div class="sortable-handle">
+                            <img src="src/images/hashtag-solid.svg" class="icon mr-1"/> Serial
+                        </div>
+                    </th>
+                    <th class="resizable" scope="col" data-sort="startDate" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)">
+                        <div class="sortable-handle">
+                            <img src="src/images/calendar-day-solid.svg" class="icon mr-1"/> Start Date
+                        </div>
+                    </th>
+                    <th class="resizable" scope="col" data-sort="endDate" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)">
+                        <div class="sortable-handle">
+                            <img src="src/images/calendar-days-solid.svg" class="icon mr-1"/> End Date
+                        </div>
+                    </th>
+                    <th class="resizable" scope="col" data-sort="id" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)">
+                        <div class="sortable-handle">
+                            <img src="src/images/file-lines-solid.svg" class="icon mr-1"/> Common Name (CN)
+                        </div>
+                    </th>
+                    <th class="resizable" scope="col" data-sort="downloads" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)">
+                        <div class="sortable-handle">
+                            <img src="src/images/download-solid.svg" class="icon mr-1"/> Downloads
+                        </div>
+                    </th>
                 </tr>
             </thead>
             <tbody id="certTableBody">
@@ -95,5 +122,69 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="index.js"></script>
+    <script>
+        let headers = [...document.querySelectorAll('th')];
+        let dragCurEl = null;
+        let dragNextEl = null;
+        let dragOldIndex = -1;
+        let dragNewIndex = -1;
+
+        function onDragStart(evt) {
+            dragCurEl = evt.target;
+            dragOldIndex = headers.findIndex((e) => e === dragCurEl);
+            evt.dataTransfer.effectAllowed = 'move';
+        }
+
+        function onDragOver(evt) {
+            evt.preventDefault();
+            if (dragNextEl) {
+                dragNextEl.classList.remove('autotable-drag-border');
+            }
+            dragNextEl = evt.target.closest('th');
+            if (dragNextEl) {
+                dragNextEl.classList.add('autotable-drag-border');
+            }
+        }
+
+        function onDragEnd() {
+            dragNewIndex = headers.findIndex((e) => e === dragNextEl);
+            if (dragNextEl) {
+                dragNextEl.classList.remove('autotable-drag-border');
+            }
+
+            if (dragOldIndex !== -1 && dragNewIndex !== -1 && dragNewIndex !== dragOldIndex) {
+                // Move header
+                arrayMove(headers, dragOldIndex, dragNewIndex);
+                
+                // Move table content
+                const rows = [...document.querySelectorAll('#certTableBody tr')];
+                rows.forEach(row => {
+                    const cells = [...row.children];
+                    arrayMove(cells, dragOldIndex, dragNewIndex);
+                    row.innerHTML = '';
+                    cells.forEach(cell => row.appendChild(cell));
+                });
+                updateTable();
+            }
+
+            dragCurEl = null;
+            dragNextEl = null;
+            dragOldIndex = -1;
+            dragNewIndex = -1;
+        }
+
+        function arrayMove(arr, oldIndex, newIndex) {
+            const movedItem = arr.splice(oldIndex, 1)[0];
+            arr.splice(newIndex, 0, movedItem);
+        }
+
+        function updateTable() {
+            const tableHeader = document.querySelector('.thead tr');
+            tableHeader.innerHTML = ''; 
+            headers.forEach(header => {
+                tableHeader.appendChild(header);
+            });
+        }
+    </script>
 </body>
 </html>
