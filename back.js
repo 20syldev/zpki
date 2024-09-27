@@ -293,7 +293,7 @@ const readCertData = () => {
     const now = moment();
     const certificateData = Array.from(certMap.values()).map(cert => {
         if (moment(cert.endDate).isBefore(now)) {
-            cert.status = cert.status === 'R' ? 'R' : 'I';
+            cert.status = cert.status === 'R' ? 'R' : 'E';
         }
         return cert;
     }).filter(cert => 
