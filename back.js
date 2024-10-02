@@ -1,4 +1,4 @@
-const { spawn } = require('child_process');
+const { exec, spawn } = require('child_process');
 
 const fs = require('fs');
 const path = require('path');
@@ -6,7 +6,6 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const express = require('express');
-const moment = require('moment');
 const cors = require('cors');
 
 // Set basic variables
@@ -63,12 +62,10 @@ app.get('/', (req, res) => {
 
 // Route to get the list of certificates
 app.get('/list', (req, res, next) => {
-    try {
-        const certData = readCertData();
-        res.json(certData);
-    } catch (error) {
-        next(error);
-    }
+    exec('./zpki ca-list --json', { cwd: srcDir }, (error, stdout) => {
+        if (error) return next(error);
+        res.json(JSON.parse(stdout));
+    });
 });
 
 // Route to create certificates
@@ -235,75 +232,6 @@ app.post('/renew', (req, res, next) => {
     };
     processRenewals();
 });
-
-// Function to read and filter certificate data
-const readCertData = () => {
-    const idxPath = path.join(__dirname, 'src', 'ca.idx');
-    const idzPath = path.join(__dirname, 'src', 'ca.idz');
-
-    if (!fs.existsSync(idxPath) || !fs.existsSync(idzPath)) {
-        throw new Error('Missing ca.idx or ca.idz files.');
-    }
-
-    const idxData = fs.readFileSync(idxPath, 'utf8');
-    const idzData = fs.readFileSync(idzPath, 'utf8');
-
-    const idxLines = idxData.split('\n').filter(line => line.trim() !== '');
-    const idzLines = idzData.split('\n').filter(line => line.trim() !== '');
-
-    const certMap = new Map();
-
-    const parseCN = (str) => {
-        const match = str.match(/\/CN=([\s\S]*?)(?:\/|$)/);
-        return match ? match[1].trim() : '';
-    };
-
-    idxLines.forEach(line => {
-        const parts = line.trim().split('\t');
-        if (parts.length >= 5) {
-            const status = parts[0];
-            const expiration = parts[1];
-            const serial = parts[3];
-            const subject = parts[4] !== 'unknown' ? parseCN(parts[4]) : '';
-            certMap.set(serial, { 
-                status,
-                expiration,
-                id: subject
-            });
-        }
-    });
-
-    idzLines.forEach(line => {
-        const parts = line.trim().split('\t');
-        if (parts.length >= 6) {
-            const serial = parts[0];
-            if (certMap.has(serial)) {
-                const cert = certMap.get(serial);
-                cert.serial = serial;
-                cert.signature = parts[1];
-                cert.startDate = parts[2];
-                cert.endDate = parts[3];
-                cert.id = parts[4] !== 'unknown' ? parseCN(parts[4]) : cert.id;
-                certMap.set(serial, cert);
-            }
-        }
-    });
-
-    // Update status if expiration date is in the past
-    const now = moment();
-    const certificateData = Array.from(certMap.values()).map(cert => {
-        if (moment(cert.endDate).isBefore(now)) {
-            cert.status = cert.status === 'R' ? 'R' : 'E';
-        }
-        return cert;
-    }).filter(cert => 
-        cert.id && cert.id !== 'undefined' &&
-        cert.status && cert.expiration && cert.serial &&
-        cert.startDate && cert.endDate
-    );
-
-    return certificateData;
-};
 
 app.use(handleError);
 app.listen(port, () => {
