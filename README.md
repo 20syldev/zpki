@@ -8,47 +8,49 @@ ZPKI is a command-line utility for managing a Public Key Infrastructure (PKI). I
 zpki 1.0 - Benoit DOLEZ <bdolez@zenetys.com> - MIT License
 Usage: zpki [options] ACTION [ACTION-PARAMETERS]
 Options:
- -h, --help           Show help message
- -V, --version        Show version
- --x-debug            Enable bash debug mode
- -q, --quiet          Set verbose level to 0
- -v, --verbose        Define verbose level (must be repeat)
- -y, --yes            valid all response
- -C, --ca             Set current CA base directory
- -c, --cipher CIPHER  Define cipher for key (none for no encryption)
- --force              Regenerate CSR even if exists (eg: change in SANs)
- --json               Format using JSON
- --no-utf8            Disable default UTF9 encoding
+ -h, --help              Display help message
+ -V, --version           View version
+ -C, --ca                Set current CA base directory
+ -q, --quiet             Set verbose level to 0
+ -y, --yes               Validate all responses
+ -v, --verbose           Define verbose level (must be repeat)
+ -c, --cipher [CIPHER]   Define cipher for key (none for no encryption)
+ --force                 Regenerate CSR even if it exists (e.g. change in SANs)
+ --json                  Format using JSON
+ --no-utf8               Disable default UTF8 encoding
+ --x-debug               Enable bash debug mode
 
-<ACTION> is one of :
+<ACTION> is one of:
  create-cnf
-     Generate a default OpenSSL configuration file
+     └─ Generate a default OpenSSL configuration file
  create-key [CN|SUBJ]
-     Create a key file
- create-csr CN|SUBJ [ALTNAMES...]
-     Generate a certificate signing request (CSR)
- create-self CN|SUBJ [ALTNAMES...]
-     Create a self-signed certificate
- create-ca CN|SUBJ
-     Create a Certificate Authority (CA) and its storage
- create-crt {CN|SUBJ} [ALTNAMES...]
-     Create a certificate
+     └─ Create a key file
+ create-csr [CN|SUBJ] <ALTNAMES>
+     └─ Generate a certificate signing request (CSR) file
+ create-self [CN|SUBJ] <ALTNAMES>
+     └─ Create a self-signed certificate
+ create-ca [CN|SUBJ]
+     └─ Create a Certificate Authority (CA) and its storage
+ create-crt [CN|SUBJ] <ALTNAMES>
+     └─ Create a certificate
  ca-list
-     List certificates stored in the CA
- ca-sign-csr CN|SUBJ|CSRFILE
-     Sign a CSR file using the CA
- ca-update-crt CN|SUBJ|CRTFILE
-     Update a certificate
- ca-revoke-crt CN|SUBJ|CRTFILE
-     Revoke a certificate
+     └─ List certificates stored in the CA
+ ca-sign-csr [CN|SUBJ|CSRFILE]
+     └─ Sign a CSR file using the CA
+ ca-update-crt [CN|SUBJ|CRTFILE]
+     └─ Update a certificate
+ ca-revoke-crt [CN|SUBJ|CRTFILE]
+     └─ Revoke a certificate
+ ca-display-crt [CRTFILE]
+     └─ Display an entire certificate file (.crt)
  ca-dump-crt [CRTFILE]
-     Dump the contents of a certificate file
+     └─ Dump the content of a certificate (.crt) file
  ca-dump-csr [CSRFILE]
-     Dump the contents of a CSR file
+     └─ Dump the content of a certificate signing request (.csr) file
  ca-dump-key [KEYFILE]
-     Dump the contents of a key file
+     └─ Dump the content of a private key (.key) file
 
-For Subject Alternative Names (SANs), use the format: DNS:<FQDN>, IP:ADDR
+For Subject Alternative Names (SANs), add address type : DNS:<FQDN>, IP:ADDR
 ```
 
 
