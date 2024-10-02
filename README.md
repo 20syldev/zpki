@@ -7,18 +7,20 @@ ZPKI is a command-line utility for managing a Public Key Infrastructure (PKI). I
 ```
 zpki 1.0 - Benoit DOLEZ <bdolez@zenetys.com> - MIT License
 Usage: zpki [options] ACTION [ACTION-PARAMETERS]
-
 Options:
- -h, --help           Show this help message
- -V, --version        Display the version information
+ -h, --help           Show help message
+ -V, --version        Show version
  --x-debug            Enable bash debug mode
- -v, --verbose        Set verbose level (can be repeated for higher verbosity)
- -q, --quiet          Set verbose level to 0 (minimal output)
- -C, --ca             Specify the CA base directory
- -y, --yes            Automatically accept all prompts
- -c, --cipher         Define the cipher (use 'none' for no encryption)
+ -q, --quiet          Set verbose level to 0
+ -v, --verbose        Define verbose level (must be repeat)
+ -y, --yes            valid all response
+ -C, --ca             Set current CA base directory
+ -c, --cipher CIPHER  Define cipher for key (none for no encryption)
+ --force              Regenerate CSR even if exists (eg: change in SANs)
+ --json               Format using JSON
+ --no-utf8            Disable default UTF9 encoding
 
-Actions:
+<ACTION> is one of :
  create-cnf
      Generate a default OpenSSL configuration file
  create-key [CN|SUBJ]
@@ -39,6 +41,12 @@ Actions:
      Update a certificate
  ca-revoke-crt CN|SUBJ|CRTFILE
      Revoke a certificate
+ ca-dump-crt [CRTFILE]
+     Dump the contents of a certificate file
+ ca-dump-csr [CSRFILE]
+     Dump the contents of a CSR file
+ ca-dump-key [KEYFILE]
+     Dump the contents of a key file
 
 For Subject Alternative Names (SANs), use the format: DNS:<FQDN>, IP:ADDR
 ```
