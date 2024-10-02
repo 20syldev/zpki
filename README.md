@@ -106,10 +106,11 @@ $ zpki -y -c none ca-update-crt "Server1" certs/Server1_new.crt
 
 #### Listing Certificates
 ```
-$ zpki ca-list
+$ zpki ca-list --json
 [
-  {"status":"V","expiration":"2022-02-06T21:06:56+0200","serial":"A638E2BB7E8C","subject":"/CN=Server1"},
-  {"status":"V","expiration":"2022-02-06T21:20:08+0200","serial":"A638E2BB7E8E","subject":"/CN=Server2"}
+ {"status":"E","expiration":"2023-10-03T09:56:09+0200","serial":"DADF28B6A30F","id":"Server1","hash":"756b76dc","issuer":"/CN=CA","cn":"Server1","subject":"/CN=Server1","startDate":"2022-10-02T11:56:09+02:00","endDate":"2023-10-03T09:56:09+0200"}
+ {"status":"E","expiration":"2023-10-03T09:56:09+0200","serial":"DADF28B6A30F","id":"Server2","hash":"756b76dc","issuer":"/CN=CA","cn":"Server2","subject":"/CN=Server2","startDate":"2022-10-02T11:56:09+02:00","endDate":"2023-10-03T09:56:09+0200"}
 ]
+
 ```
 
