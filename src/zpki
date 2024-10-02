@@ -385,7 +385,7 @@ function ca-list() {
   local CA_IDXFILE=ca.idx
   local CA_IDZFILE=ca.idz
 
-  awk -v "FORMAT_$FORMAT=1" -v IDZFILE=ca.idz < $CA_IDXFILE '
+  gawk -v "FORMAT_$FORMAT=1" -v IDZFILE=ca.idz < $CA_IDXFILE '
   BEGIN {
     FS="\t";
 
@@ -417,7 +417,7 @@ function ca-list() {
   }
   function rfc3339(date) {
     if (!date) return ;
-    ds = gensub("(..)", "\\1 ", "g", date)
+    ds = gensub(/(..)/, "\\1 ", "g", date);
     return (strftime("%Y-%m-%dT%H:%M:%S%z", mktime("20" ds)));
   }
   function cn(dn, a) {
@@ -518,7 +518,7 @@ function ca-revoke-crt() {
 }
 
 function x509-to-json() {
-  awk '
+  gawk '
   function parseLine(line) {
     if (match(line, "^(\\s*)([^:]+):\\s*$", a)) {
       start = a[1] "    "; # add four spaces
@@ -575,7 +575,7 @@ function ca-dump-crt() {
 
   [[ -e $CRTFILE ]] ||
     fatal "can't get $CRTFILE"
-  awk '{if (substr($0, 1, 1) == "-") dump=1; if (dump) print $0;}' < $CRTFILE
+  gawk '{if (substr($0, 1, 1) == "-") dump=1; if (dump) print $0;}' < $CRTFILE
 }
 
 function ca-dump-csr() {
@@ -583,7 +583,7 @@ function ca-dump-csr() {
 
   [[ -e $CSRFILE ]] ||
     fatal "can't get $CSRFILE"
-  awk '{if (substr($0, 1, 1) == "-") dump=1; if (dump) print $0;}' < $CSRFILE
+  gawk '{if (substr($0, 1, 1) == "-") dump=1; if (dump) print $0;}' < $CSRFILE
 }
 
 function ca-dump-key() {
@@ -591,7 +591,7 @@ function ca-dump-key() {
 
   [[ -e $KEYFILE ]] ||
     fatal "can't get $KEYFILE"
-  awk '{if (substr($0, 1, 1) == "-") dump=1; if (dump) print $0;}' < $KEYFILE
+  gawk '{if (substr($0, 1, 1) == "-") dump=1; if (dump) print $0;}' < $KEYFILE
 }
 
 
